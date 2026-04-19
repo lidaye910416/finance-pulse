@@ -1,0 +1,49 @@
+{
+  "news": [
+    {
+      "id": "1",
+      "category": "us-stock",
+      "title": "特斯拉Q1交付量超预期，股价+5.2%",
+      "summary": "特斯拉今日公布Q1交付数据，环比+20%，超市场预期。分析师上调目标价至200美元。",
+      "source": "Yahoo Finance",
+      "time": "2026-04-18 06:30",
+      "impact": "positive"
+    },
+    {
+      "id": "2",
+      "category": "commodity",
+      "title": "霍尔木兹局势紧张，原油单日-9.41%",
+      "summary": "地缘政治风险升温，霍尔木兹海峡紧张局势导致原油价格大幅下跌。",
+      "source": "Bloomberg",
+      "time": "2026-04-18 07:15",
+      "impact": "negative"
+    },
+    {
+      "id": "3",
+      "category": "a-stock",
+      "title": "AI芯片板块集体爆发，多股涨停",
+      "summary": "国家发布AI芯片补贴政策，规模百亿级。寒武纪、海光信息等多股涨停。",
+      "source": "东方财富",
+      "time": "2026-04-18 08:00",
+      "impact": "positive"
+    },
+    {
+      "id": "4",
+      "category": "crypto",
+      "title": "BTC $75,951 (-1.86%)，恐慌情绪有所缓解",
+      "summary": "比特币价格小幅回调，但恐慌贪婪指数显示情绪有所改善。机构买入增加。",
+      "source": "CoinDesk",
+      "time": "2026-04-18 07:45",
+      "impact": "neutral"
+    },
+    {
+      "id": "5",
+      "category": "tech",
+      "title": "字节跳动发布Gauss 2.0，推理速度提升40%",
+      "summary": "字节跳动发布新一代大模型Gauss 2.0，在多项基准测试中超越GPT-4。",
+      "source": "TechCrunch",
+      "time": "2026-04-18 09:00",
+      "impact": "positive"
+    }
+  ]
+}

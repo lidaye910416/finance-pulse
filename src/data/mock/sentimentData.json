@@ -1,0 +1,24 @@
+{
+  "fear_greed_index": 26,
+  "phase": "冰点/修复",
+  "limit_up_count": 47,
+  "limit_down_count": 8,
+  "volume": "7,821亿",
+  "northbound_flow": "+23亿",
+  "margin_balance": "1.58万亿",
+  "northbound_trend": [
+    { "day": "周一", "value": 35 },
+    { "day": "周二", "value": 42 },
+    { "day": "周三", "value": 38 },
+    { "day": "周四", "value": 55 },
+    { "day": "周五", "value": 67 },
+    { "day": "周六", "value": 72 },
+    { "day": "周日", "value": 80 }
+  ],
+  "sector_flow": [
+    { "name": "AI算力", "flow": "+28亿", "trend": "up" },
+    { "name": "半导体设备", "flow": "+15亿", "trend": "up" },
+    { "name": "房地产", "flow": "-8亿", "trend": "down" },
+    { "name": "银行", "flow": "-3亿", "trend": "down" }
+  ]
+}

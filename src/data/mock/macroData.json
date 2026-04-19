@@ -1,0 +1,33 @@
+{
+  "gdp": 5.0,
+  "cpi": 1.2,
+  "pmi": 49.2,
+  "lpr": 3.45,
+  "gdp_history": [
+    { "year": "2023", "value": 5.2 },
+    { "year": "2024", "value": 5.0 },
+    { "year": "2025-Q1", "value": 5.4 },
+    { "year": "2025-Q2", "value": 5.3 },
+    { "year": "2025-Q3", "value": 5.2 },
+    { "year": "2025-Q4", "value": 5.1 }
+  ],
+  "cpi_history": [
+    { "month": "5月", "value": 0.3 },
+    { "month": "6月", "value": 0.2 },
+    { "month": "7月", "value": 0.5 },
+    { "month": "8月", "value": 0.6 },
+    { "month": "9月", "value": 0.4 },
+    { "month": "10月", "value": 0.3 },
+    { "month": "11月", "value": 0.2 },
+    { "month": "12月", "value": 0.1 },
+    { "month": "1月", "value": 0.5 },
+    { "month": "2月", "value": 0.7 },
+    { "month": "3月", "value": 1.2 },
+    { "month": "4月", "value": 1.1 }
+  ],
+  "money_supply": {
+    "m2": { "value": "313.52万亿", "yoy": "+7.0%" },
+    "m1": { "value": "67.47万亿", "yoy": "+1.2%" },
+    "m0": { "value": "12.18万亿", "yoy": "+5.8%" }
+  }
+}

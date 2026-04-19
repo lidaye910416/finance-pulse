@@ -1,0 +1,46 @@
+{
+  "events": [
+    {
+      "id": "1",
+      "question": "Will Jesus Christ return before GTA VI?",
+      "probability": 48.5,
+      "volume": "$11M",
+      "trend": "up",
+      "platform": "Polymarket"
+    },
+    {
+      "id": "2",
+      "question": "Russia-Ukraine Ceasefire before GTA VI?",
+      "probability": 53.5,
+      "volume": "$1.54M",
+      "trend": "down",
+      "platform": "Polymarket"
+    },
+    {
+      "id": "3",
+      "question": "New Rihanna Album before GTA VI?",
+      "probability": 65,
+      "volume": "$698K",
+      "platform": "Polymarket"
+    },
+    {
+      "id": "4",
+      "question": "Fed rate cut in June 2026?",
+      "probability": 68,
+      "volume": "$2.3M",
+      "trend": "up",
+      "platform": "Polymarket"
+    }
+  ],
+  "arbitrage_opportunities": [
+    {
+      "event": "美联储6月降息",
+      "platforms": [
+        { "name": "Polymarket", "probability": 68 },
+        { "name": "Metaculus", "probability": 71 },
+        { "name": "Kalshi", "probability": 65 }
+      ],
+      "difference": 6
+    }
+  ]
+}

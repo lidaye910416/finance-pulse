@@ -1,0 +1,22 @@
+{
+  "quotes": [
+    { "symbol": "S&P 500", "name": "S&P 500", "price": "7,126", "change": "+1.20%", "change_percent": 1.20 },
+    { "symbol": "沪深300", "name": "沪深300", "price": "3,892", "change": "+0.83%", "change_percent": 0.83 },
+    { "symbol": "黄金", "name": "黄金", "price": "$4,879", "change": "+1.48%", "change_percent": 1.48 },
+    { "symbol": "原油", "name": "WTI原油", "price": "$82.59", "change": "-9.41%", "change_percent": -9.41 },
+    { "symbol": "BTC", "name": "Bitcoin", "price": "$75,951", "change": "-1.86%", "change_percent": -1.86 },
+    { "symbol": "道指", "name": "道琼斯", "price": "49,447", "change": "+1.79%", "change_percent": 1.79 },
+    { "symbol": "纳斯达克", "name": "纳斯达克", "price": "24,468", "change": "+1.52%", "change_percent": 1.52 },
+    { "symbol": "上证指数", "name": "上证指数", "price": "3,241", "change": "+0.45%", "change_percent": 0.45 }
+  ],
+  "forex_rates": {
+    "USD/CNY": 6.83,
+    "USD/EUR": 0.848,
+    "USD/JPY": 158.62,
+    "USD/GBP": 0.792,
+    "EUR/CNY": 7.58,
+    "GBP/CNY": 8.62,
+    "JPY/CNY": 0.043
+  },
+  "fear_greed_index": 26
+}
