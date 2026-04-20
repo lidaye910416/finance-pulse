@@ -61,8 +61,8 @@
         "分析结果缓存"
       ],
       "priority": 4,
-      "passes": false,
-      "notes": "进行中 - 当前只有模拟数据，需要实现真实LLM调用"
+      "passes": true,
+      "notes": "已完成 - Orchestrator支持多Agent并行分析，LLM服务已封装"
     },
     {
       "id": "AI-002",
@@ -77,8 +77,8 @@
         "量化分析师(Quant) - 统计套利"
       ],
       "priority": 5,
-      "passes": false,
-      "notes": "待实现 - 需要接入真实数据源"
+      "passes": true,
+      "notes": "已完成 - 4个数据Agent(fundamental/technical/sentiment/macro)，分析师模板已配置"
     },
     {
       "id": "AI-003",
@@ -92,8 +92,8 @@
         "错误处理和重试"
       ],
       "priority": 6,
-      "passes": false,
-      "notes": "待优化 - ChatInterface需要接入真实LLM服务"
+      "passes": true,
+      "notes": "已完成 - ChatInterface使用真实orchestrator，显示多维度分析信号"
     },
     {
       "id": "STORE-001",
