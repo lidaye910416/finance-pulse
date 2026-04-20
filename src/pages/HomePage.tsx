@@ -1,12 +1,36 @@
 import { useNavigate } from 'react-router-dom';
 import { Card, MetricCard, Badge } from '../components';
+import { DataType, UpdateFrequency, getUpdateConfig } from '../services/data';
 
 // 首页数据
 const todaySummary = {
-  fearGreed: { value: 26, label: '恐惧贪婪', trend: 'down' as const },
-  northbound: { value: '+23.5亿', label: '北向资金', trend: 'up' as const },
-  limitUp: { value: '47家', label: '涨停', trend: 'down' as const },
-  marginBalance: { value: '1.58万亿', label: '两融余额', trend: 'down' as const },
+  fearGreed: { value: 26, label: '恐惧贪婪', trend: 'down' as const, dataType: DataType.FEAR_GREED },
+  northbound: { value: '+23.5亿', label: '北向资金', trend: 'up' as const, dataType: DataType.NORTHBOUND },
+  limitUp: { value: '47家', label: '涨停', trend: 'down' as const, dataType: DataType.LIMIT_UP_DOWN },
+  marginBalance: { value: '1.58万亿', label: '两融余额', trend: 'down' as const, dataType: DataType.MARGIN_BALANCE },
+};
+
+// 数据更新时间映射
+const getUpdateFrequencyLabel = (type: DataType): string => {
+  const config = getUpdateConfig(type);
+  if (!config) return '未知';
+
+  switch (config.updateFrequency) {
+    case UpdateFrequency.REALTIME:
+      return '实时';
+    case UpdateFrequency.MINUTE:
+      return '分钟更新';
+    case UpdateFrequency.HOURLY:
+      return '小时更新';
+    case UpdateFrequency.DAILY:
+      return '日更';
+    case UpdateFrequency.WEEKLY:
+      return '周更';
+    case UpdateFrequency.MONTHLY:
+      return '月更';
+    default:
+      return '未知';
+  }
 };
 
 const quickActions = [
@@ -41,6 +65,19 @@ export function HomePage() {
           {new Date().toLocaleDateString('zh-CN', { year: 'numeric', month: 'long', day: 'numeric', weekday: 'long' })}
         </p>
       </div>
+
+      {/* 数据更新状态栏 */}
+      <Card className="border-accent-blue/20 bg-accent-blue/5">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <div className="w-2 h-2 bg-accent-green rounded-full animate-pulse"></div>
+            <span className="text-sm text-gray-300">数据已更新</span>
+          </div>
+          <div className="text-xs text-gray-500">
+            恐惧贪婪 {getUpdateFrequencyLabel(DataType.FEAR_GREED)} · 北向资金 {getUpdateFrequencyLabel(DataType.NORTHBOUND)}
+          </div>
+        </div>
+      </Card>
 
       {/* 预警提示 */}
       <div className="space-y-2">
