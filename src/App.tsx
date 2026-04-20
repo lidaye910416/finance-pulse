@@ -2,6 +2,11 @@ import { useState, useEffect, useCallback } from 'react';
 import { BrowserRouter, Routes, Route, Link, useLocation } from 'react-router-dom';
 import { listen } from '@tauri-apps/api/event';
 import {
+  HomePage,
+  DataPage,
+  AnalysisPage,
+  MinePage,
+  // Legacy pages (kept for backward compatibility)
   DashboardHome,
   AStockSentiment,
   MacroData,
@@ -11,16 +16,6 @@ import {
   Tools,
   StrategicAnalysis,
 } from './pages';
-
-const tabs = [
-  { path: '/', label: '首页', icon: '🏠' },
-  { path: '/a-stock', label: '行情', icon: '📊' },
-  { path: '/macro', label: '宏观', icon: '📈' },
-  { path: '/position', label: '仓位', icon: '🎯' },
-  { path: '/news', label: '资讯', icon: '📰' },
-  { path: '/prediction', label: '预测', icon: '🔮' },
-  { path: '/tools', label: '工具', icon: '⚙️' },
-];
 
 interface HeaderProps {
   lastUpdate: Date | null;
@@ -95,41 +90,39 @@ function Header({ lastUpdate, onRefresh, isRefreshing }: HeaderProps) {
 function BottomNav() {
   const location = useLocation();
 
+  // 简化的底部导航 - 将在新结构中逐步替换为 SimplifiedNav
   return (
     <nav className="fixed bottom-0 left-0 right-0 z-50 glass border-t border-white/5 safe-bottom">
-      <div className="max-w-lg mx-auto px-2 py-2">
+      <div className="max-w-lg mx-auto px-4 py-2">
         <div className="flex justify-around items-center">
-          {tabs.map((tab, index) => {
-            const isActive = location.pathname === tab.path;
-            return (
-              <Link
-                key={tab.path}
-                to={tab.path}
-                className={`
-                  relative flex flex-col items-center
-                  py-1.5 px-3
-                  rounded-xl
-                  transition-all duration-200
-                  btn-press animate-slide-in
-                  ${isActive
-                    ? 'text-accent-blue'
-                    : 'text-gray-500 hover:text-gray-300'
-                  }
-                `}
-                style={{ animationDelay: `${index * 30}ms` }}
-              >
-                {isActive && (
-                  <div className="absolute inset-0 bg-accent-blue/10 rounded-xl border border-accent-blue/20" />
-                )}
-                <span className={`text-xl relative z-10 ${isActive ? 'filter drop-shadow-[0_0_8px_rgba(59,130,246,0.5)]' : ''}`}>
-                  {tab.icon}
-                </span>
-                <span className={`text-[10px] mt-0.5 font-medium relative z-10 ${isActive ? 'text-accent-blue' : ''}`}>
-                  {tab.label}
-                </span>
-              </Link>
-            );
-          })}
+          <Link
+            to="/"
+            className={`flex flex-col items-center py-2 px-6 rounded-xl transition-all duration-200 btn-press ${location.pathname === '/' ? 'text-accent-blue' : 'text-gray-500'}`}
+          >
+            <span className="text-2xl">🏠</span>
+            <span className="text-xs mt-1">首页</span>
+          </Link>
+          <Link
+            to="/data"
+            className={`flex flex-col items-center py-2 px-6 rounded-xl transition-all duration-200 btn-press ${location.pathname === '/data' ? 'text-accent-blue' : 'text-gray-500'}`}
+          >
+            <span className="text-2xl">📊</span>
+            <span className="text-xs mt-1">数据</span>
+          </Link>
+          <Link
+            to="/analysis"
+            className={`flex flex-col items-center py-2 px-6 rounded-xl transition-all duration-200 btn-press ${location.pathname === '/analysis' ? 'text-accent-blue' : 'text-gray-500'}`}
+          >
+            <span className="text-2xl">🧠</span>
+            <span className="text-xs mt-1">分析</span>
+          </Link>
+          <Link
+            to="/mine"
+            className={`flex flex-col items-center py-2 px-6 rounded-xl transition-all duration-200 btn-press ${location.pathname === '/mine' ? 'text-accent-blue' : 'text-gray-500'}`}
+          >
+            <span className="text-2xl">👤</span>
+            <span className="text-xs mt-1">我的</span>
+          </Link>
         </div>
       </div>
     </nav>
@@ -169,7 +162,14 @@ function App() {
 
         <main className="max-w-lg mx-auto px-4 pt-20">
           <Routes>
-            <Route path="/" element={<DashboardHome />} />
+            {/* New optimized routes */}
+            <Route path="/" element={<HomePage />} />
+            <Route path="/data" element={<DataPage />} />
+            <Route path="/analysis" element={<AnalysisPage />} />
+            <Route path="/mine" element={<MinePage />} />
+
+            {/* Legacy routes - kept for compatibility */}
+            <Route path="/home" element={<DashboardHome />} />
             <Route path="/a-stock" element={<AStockSentiment />} />
             <Route path="/macro" element={<MacroData />} />
             <Route path="/position" element={<PositionManagement />} />

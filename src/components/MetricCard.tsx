@@ -5,6 +5,7 @@ interface MetricCardProps {
   trend?: 'up' | 'down' | 'neutral';
   icon?: string;
   animationDelay?: number;
+  onClick?: () => void;
 }
 
 export function MetricCard({
@@ -13,7 +14,8 @@ export function MetricCard({
   subValue,
   trend = 'neutral',
   icon,
-  animationDelay = 0
+  animationDelay = 0,
+  onClick
 }: MetricCardProps) {
   const trendConfig = {
     up: {
@@ -47,8 +49,10 @@ export function MetricCard({
         transition-all duration-200
         animate-fade-in-up
         ${config.glow}
+        ${onClick ? 'cursor-pointer' : ''}
       `}
       style={{ animationDelay: `${animationDelay}ms` }}
+      onClick={onClick}
     >
       {/* Header */}
       <div className="flex items-center justify-between mb-2">
