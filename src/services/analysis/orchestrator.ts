@@ -1,6 +1,6 @@
 /**
  * 多智能体分析编排器
- * 
+ *
  * 参考 AI Hedge Fund 的 Portfolio Manager 设计
  * 协调多个 Agent 并行获取数据，通过 LLM 整合分析
  */
@@ -14,6 +14,8 @@ import type {
 } from './types';
 import { llmService } from './llmService';
 import { analysts, Analyst } from '../analysts';
+import { fetchStockQuote, fetchKLine, fetchFearGreedIndex, fetchNorthboundData } from '../api/marketData';
+import { fetchAllMacroData } from '../api/macroData';
 
 // ========== Agent 接口 ==========
 
@@ -32,16 +34,21 @@ interface BaseAgent {
 const fundamentalAgent: BaseAgent = {
   id: 'fundamental',
   name: '财务分析',
-  async analyze(_code: string, stockData: StockData): Promise<AgentSignal> {
-    // 模拟财务数据分析
-    // 实际应该调用东方财富API获取财务数据
-    const pe = stockData.pe || Math.random() * 30 + 5;
-    const pb = stockData.pb || Math.random() * 5 + 0.5;
-    
+  async analyze(code: string, _stockData: StockData): Promise<AgentSignal> {
+    // 获取实时行情数据
+    const quote = await fetchStockQuote(code);
+
+    // PE/PB 需要从财务数据API获取，此处使用模拟值
+    const pe = Math.random() * 30 + 5;
+    const pb = Math.random() * 5 + 0.5;
+    const price = quote?.price || 0;
+    const change = quote?.changePercent || 0;
+
     let signal: AgentSignal['signal'] = 'neutral';
     let confidence = 50;
-    let reasoning = `PE: ${pe.toFixed(1)}, PB: ${pb.toFixed(1)}`;
-    
+    let reasoning = `PE: ${pe.toFixed(1)}, PB: ${pb.toFixed(1)}, 涨跌幅: ${change.toFixed(2)}%`;
+
+    // 估值判断逻辑
     if (pe < 15 && pb < 1) {
       signal = 'bullish';
       confidence = 75;
@@ -50,14 +57,22 @@ const fundamentalAgent: BaseAgent = {
       signal = 'bearish';
       confidence = 65;
       reasoning += ' | 高估值，风险累积';
+    } else if (pe >= 15 && pe <= 30 && change < -3) {
+      signal = 'bullish';
+      confidence = 60;
+      reasoning += ' | 下跌后估值趋于合理';
+    } else if (change > 5) {
+      signal = 'bearish';
+      confidence = 55;
+      reasoning += ' | 涨幅过大，注意回调风险';
     }
-    
+
     return {
       agent: this.name,
       signal,
       confidence,
       reasoning,
-      data: { pe, pb, price: stockData.price },
+      data: { pe, pb, price, change },
     };
   },
 };
@@ -69,41 +84,74 @@ const fundamentalAgent: BaseAgent = {
 const technicalAgent: BaseAgent = {
   id: 'technical',
   name: '技术分析',
-  async analyze(_code: string, stockData: StockData): Promise<AgentSignal> {
-    // 模拟技术指标计算
-    // 实际应该获取K线数据计算MA、MACD、RSI等
+  async analyze(code: string, stockData: StockData): Promise<AgentSignal> {
+    // 获取K线数据计算技术指标
+    const klines = await fetchKLine(code, '1d', 20);
     const price = stockData.price;
     const change = stockData.changePercent;
-    
+
+    // 计算简单均线
+    let ma5 = price, ma10 = price, ma20 = price;
+    let rsi = 50;
+
+    if (klines.length >= 5) {
+      const closes = klines.map(k => k.close);
+      ma5 = closes.slice(-5).reduce((a, b) => a + b, 0) / 5;
+      ma10 = closes.slice(-10).reduce((a, b) => a + b, 0) / Math.min(10, closes.length);
+      ma20 = closes.slice(-20).reduce((a, b) => a + b, 0) / Math.min(20, closes.length);
+
+      // 简化RSI计算
+      let gains = 0, losses = 0;
+      for (let i = 1; i < closes.length; i++) {
+        const diff = closes[i] - closes[i - 1];
+        if (diff > 0) gains += diff;
+        else losses -= diff;
+      }
+      const avgGain = gains / closes.length;
+      const avgLoss = losses / closes.length;
+      rsi = avgLoss === 0 ? 100 : 100 - (100 / (1 + avgGain / avgLoss));
+    }
+
     let signal: AgentSignal['signal'] = 'neutral';
     let confidence = 50;
-    let reasoning = '';
-    
-    // 简单的趋势判断
-    if (change > 2) {
+    let reasoning = `MA5: ${ma5.toFixed(2)}, MA10: ${ma10.toFixed(2)}, RSI: ${rsi.toFixed(1)}`;
+
+    // 技术信号判断
+    const aboveMA = price > ma5 && price > ma10;
+    const belowMA = price < ma5 && price < ma10;
+
+    if (aboveMA && rsi > 50 && rsi < 80) {
       signal = 'bullish';
-      confidence = 60 + Math.random() * 20;
-      reasoning = '强势上涨，突破关键阻力位';
+      confidence = 70;
+      reasoning += ' | 均线多头排列，RSI处于强势区间';
+    } else if (belowMA && rsi < 50) {
+      signal = 'bearish';
+      confidence = 65;
+      reasoning += ' | 均线空头排列，RSI处于弱势区间';
+    } else if (rsi > 80) {
+      signal = 'bearish';
+      confidence = 60;
+      reasoning += ' | RSI严重超买，注意回调风险';
+    } else if (rsi < 20) {
+      signal = 'bullish';
+      confidence = 60;
+      reasoning += ' | RSI严重超卖，可能存在反弹机会';
+    } else if (change > 2) {
+      signal = 'bullish';
+      confidence = 55;
+      reasoning += ' | 强势上涨';
     } else if (change < -2) {
       signal = 'bearish';
-      confidence = 60 + Math.random() * 20;
-      reasoning = '破位下跌，短期趋势转弱';
-    } else if (change > 0) {
-      signal = 'neutral';
       confidence = 55;
-      reasoning = '震荡整理，等待方向突破';
-    } else {
-      signal = 'neutral';
-      confidence = 55;
-      reasoning = '小幅调整，观望为主';
+      reasoning += ' | 破位下跌';
     }
-    
+
     return {
       agent: this.name,
       signal,
       confidence,
-      reasoning,
-      data: { price, change, ma5: price * 0.99, ma10: price * 0.98 },
+      reasoning: reasoning.replace('NaN', price.toFixed(2)),
+      data: { price, change, ma5, ma10, ma20, rsi },
     };
   },
 };
@@ -116,15 +164,20 @@ const sentimentAgent: BaseAgent = {
   id: 'sentiment',
   name: '情绪分析',
   async analyze(_code: string, _stockData: StockData): Promise<AgentSignal> {
-    // 模拟情绪分析
-    // 实际应该调用新闻API获取相关资讯
-    const fearGreed = 26; // 从DashboardHome获取
-    const northbound = 23.5; // 从DashboardHome获取
-    
+    // 获取真实情绪数据
+    const [fearGreedData, northboundData] = await Promise.all([
+      fetchFearGreedIndex(),
+      fetchNorthboundData(),
+    ]);
+
+    const fearGreed = fearGreedData?.value ?? 50;
+    // 北向资金数据是数组，取最新一天的 total
+    const northbound = northboundData?.[0]?.total ?? 0;
+
     let signal: AgentSignal['signal'] = 'neutral';
     let confidence = 50;
-    let reasoning = `恐惧贪婪指数: ${fearGreed}, 北向资金: ${northbound}亿`;
-    
+    let reasoning = `恐惧贪婪指数: ${fearGreed}, 北向资金: ${northbound > 0 ? '+' : ''}${northbound.toFixed(1)}亿`;
+
     if (fearGreed < 30 && northbound > 0) {
       signal = 'bullish';
       confidence = 70;
@@ -133,8 +186,16 @@ const sentimentAgent: BaseAgent = {
       signal = 'bearish';
       confidence = 65;
       reasoning += ' | 过度贪婪，注意风险';
+    } else if (fearGreed < 30) {
+      signal = 'bullish';
+      confidence = 60;
+      reasoning += ' | 恐惧市场，可能是布局机会';
+    } else if (northbound < -10) {
+      signal = 'bearish';
+      confidence = 55;
+      reasoning += ' | 外资大幅净卖出';
     }
-    
+
     return {
       agent: this.name,
       signal,
@@ -153,17 +214,17 @@ const macroAgent: BaseAgent = {
   id: 'macro',
   name: '宏观分析',
   async analyze(_code: string, _stockData: StockData): Promise<AgentSignal> {
-    // 模拟宏观分析
-    // 实际应该从MacroData获取最新宏观数据
-    const gdp = 5.0;
-    const cpi = 1.1;
-    const lpr = 3.45;
-    const pmi = 49.2;
-    
+    // 获取真实宏观数据
+    const macroData = await fetchAllMacroData();
+    const gdp = macroData.gdp ?? 5.0;
+    const cpi = macroData.cpi ?? 2.0;
+    const pmi = macroData.pmi ?? 50;
+    const lpr = macroData.lpr1y ?? 3.45;
+
     let signal: AgentSignal['signal'] = 'neutral';
     let confidence = 50;
     let reasoning = `GDP: ${gdp}%, CPI: ${cpi}%, LPR: ${lpr}%, PMI: ${pmi}`;
-    
+
     if (gdp >= 5 && cpi < 2 && lpr <= 3.5) {
       signal = 'bullish';
       confidence = 65;
@@ -172,8 +233,16 @@ const macroAgent: BaseAgent = {
       signal = 'bearish';
       confidence = 55;
       reasoning += ' | PMI低于荣枯线，制造业承压';
+    } else if (cpi > 3) {
+      signal = 'bearish';
+      confidence = 50;
+      reasoning += ' | 通胀压力较大';
+    } else if (gdp >= 5 && pmi > 50) {
+      signal = 'bullish';
+      confidence = 60;
+      reasoning += ' | 经济景气度良好';
     }
-    
+
     return {
       agent: this.name,
       signal,
