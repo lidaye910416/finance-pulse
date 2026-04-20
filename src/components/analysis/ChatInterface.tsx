@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { analysts, Analyst } from '../../services/analysts';
+import { orchestrator } from '../../services/analysis';
 import { Card } from '../Card';
 
 interface Message {
@@ -8,6 +9,12 @@ interface Message {
   content: string;
   analyst?: Analyst;
   timestamp: Date;
+  signals?: Array<{
+    agent: string;
+    signal: string;
+    confidence: number;
+    reasoning: string;
+  }>;
 }
 
 interface ChatInterfaceProps {
@@ -20,7 +27,7 @@ export function ChatInterface({ selectedAnalyst, onAnalystChange }: ChatInterfac
     {
       id: 'welcome',
       role: 'system',
-      content: '👋 欢迎使用AI分析师！\n\n请选择一位分析师，然后输入股票代码或基金代码进行分析。\n\n例如：600519（贵州茅台）\n      000001（平安银行）\n      510300（沪深300ETF）',
+      content: '👋 欢迎使用AI分析师！\n\n请选择一位分析师，然后输入股票代码或基金代码进行分析。\n\n例如：600519（贵州茅台）\n      000001（平安银行）\n      510300（沪深300ETF）\n\n💡 也可选择右侧预设模板进行多维度分析',
       timestamp: new Date(),
     },
   ]);
@@ -50,12 +57,39 @@ export function ChatInterface({ selectedAnalyst, onAnalystChange }: ChatInterfac
     setInput('');
     setIsAnalyzing(true);
 
-    // 模拟AI分析过程
-    setTimeout(() => {
-      const analystResponse = generateAnalysisResponse(input, selectedAnalyst);
+    try {
+      // 调用编排器执行分析
+      const response = await orchestrator.analyze({
+        code: input.trim(),
+        analystIds: [selectedAnalyst.id],
+        includeHistory: true,
+      });
+
+      const analystResponse: Message = {
+        id: (Date.now() + 1).toString(),
+        role: 'analyst',
+        content: response.summary.text,
+        analyst: selectedAnalyst,
+        timestamp: new Date(),
+        signals: response.signals.map(s => ({
+          agent: s.agent,
+          signal: s.signal,
+          confidence: s.confidence,
+          reasoning: s.reasoning,
+        })),
+      };
+
       setMessages((prev) => [...prev, analystResponse]);
+    } catch (error) {
+      setMessages((prev) => [...prev, {
+        id: (Date.now() + 1).toString(),
+        role: 'system',
+        content: `分析失败: ${error}`,
+        timestamp: new Date(),
+      }]);
+    } finally {
       setIsAnalyzing(false);
-    }, 2000);
+    }
   };
 
   return (
@@ -114,6 +148,30 @@ export function ChatInterface({ selectedAnalyst, onAnalystChange }: ChatInterfac
                     <div className="text-xs text-gray-400">{message.analyst.style}</div>
                   </div>
                 </div>
+
+                {/* 多维度分析信号 */}
+                {message.signals && message.signals.length > 0 && (
+                  <div className="mb-3 p-3 bg-surface-200/30 rounded-xl">
+                    <div className="text-xs text-gray-400 mb-2">多维度分析</div>
+                    <div className="grid grid-cols-2 gap-2">
+                      {message.signals.map((signal, idx) => (
+                        <div key={idx} className="text-xs">
+                          <span className="text-gray-500">{signal.agent}:</span>
+                          <span className={`
+                            ml-1 font-medium
+                            ${signal.signal === 'bullish' ? 'text-accent-green' : ''}
+                            ${signal.signal === 'bearish' ? 'text-accent-red' : ''}
+                            ${signal.signal === 'neutral' ? 'text-gray-400' : ''}
+                          `}>
+                            {signal.signal === 'bullish' ? '↗' : signal.signal === 'bearish' ? '↘' : '→'}
+                            {signal.confidence.toFixed(0)}%
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
                 <div className="text-sm text-gray-300 whitespace-pre-line leading-relaxed">
                   {message.content}
                 </div>
@@ -175,157 +233,3 @@ export function ChatInterface({ selectedAnalyst, onAnalystChange }: ChatInterfac
   );
 }
 
-// 模拟分析响应生成
-function generateAnalysisResponse(code: string, analyst: Analyst): Message {
-  // 模拟数据
-  const mockData: Record<string, { name: string; price: number; change: number; pe: number; marketCap: string }> = {
-    '600519': { name: '贵州茅台', price: 1688.0, change: -1.2, pe: 28.5, marketCap: '2.1万亿' },
-    '000001': { name: '平安银行', price: 12.35, change: 0.8, pe: 5.2, marketCap: '2400亿' },
-    '510300': { name: '沪深300ETF', price: 3.85, change: 0.5, pe: 12.3, marketCap: '1150亿' },
-    '000858': { name: '五粮液', price: 145.6, change: -0.9, pe: 18.2, marketCap: '5600亿' },
-  };
-
-  const data = mockData[code] || {
-    name: `股票 ${code}`,
-    price: Math.random() * 100 + 10,
-    change: (Math.random() - 0.5) * 10,
-    pe: Math.random() * 30 + 5,
-    marketCap: `${(Math.random() * 10000 + 100).toFixed(0)}亿`,
-  };
-
-  const responses: Record<string, string> = {
-    buffett: `🔍 **${data.name}(${code}) 价值分析**
-
-**基础数据：**
-- 现价: ¥${data.price.toFixed(2)}
-- 涨跌幅: ${data.change > 0 ? '+' : ''}${data.change.toFixed(2)}%
-- 市盈率(PE): ${data.pe.toFixed(1)}
-- 总市值: ${data.marketCap}
-
-**内在价值评估：**
-基于DCF模型估算，当前股价 ${data.change > 0 ? '略高于' : '接近'} 内在价值。
-
-**护城河分析：**
-- 品牌护城河: ★★★★☆
-- 定价权: ★★★★☆
-- 规模经济: ★★★☆☆
-
-**投资建议：**
-${data.change < 0 ? '近期下跌提供了更好的安全边际，可以关注。' : '当前价格已反映了一定成长预期，建议耐心等待更好的买入机会。'}
-
-*本分析仅供参考，不构成投资建议*`,
-    lynch: `🚀 **${data.name}(${code}) 成长性分析**
-
-**基础数据：**
-- 现价: ¥${data.price.toFixed(2)}
-- 涨跌幅: ${data.change > 0 ? '+' : ''}${data.change.toFixed(2)}%
-- 市盈率(PE): ${data.pe.toFixed(1)}
-- 总市值: ${data.marketCap}
-
-**成长性评估：**
-- 营收增长率: 预计15-20%/年
-- 利润增长率: 预计12-18%/年
-- 行业地位: 具备成长空间
-
-**PEG分析：**
-当前PEG = ${(data.pe / 15).toFixed(2)} (基于15%增长假设)
-
-**投资亮点：**
-${data.pe < 20 ? '✓ PE处于合理区间，成长性未被过度定价' : '⚠ PE偏高，需要更高的增长率支撑'}
-
-*本分析仅供参考，不构成投资建议*`,
-    dalio: `🌍 **${data.name}(${code}) 宏观视角分析**
-
-**基础数据：**
-- 现价: ¥${data.price.toFixed(2)}
-- 涨跌幅: ${data.change > 0 ? '+' : ''}${data.change.toFixed(2)}%
-- 市盈率(PE): ${data.pe.toFixed(1)}
-- 总市值: ${data.marketCap}
-
-**宏观环境：**
-- 货币政策: 稳健略宽松
-- 汇率影响: 人民币贬值压力
-- 行业周期: 处于成熟期
-
-**风险评估：**
-- 宏观风险: 中等
-- 政策风险: 低
-- 市场风险: 高
-
-**配置建议：**
-建议占总仓位 5-10%，作为核心持仓的补充。
-
-*本分析仅供参考，不构成投资建议*`,
-    technical: `📈 **${data.name}(${code}) 技术分析**
-
-**基础数据：**
-- 现价: ¥${data.price.toFixed(2)}
-- 涨跌幅: ${data.change > 0 ? '+' : ''}${data.change.toFixed(2)}%
-
-**技术指标：**
-- MA5: ${(data.price * 0.99).toFixed(2)} (偏多)
-- MA10: ${(data.price * 0.98).toFixed(2)} (偏多)
-- MA20: ${(data.price * 1.01).toFixed(2)} (偏空)
-- RSI(14): ${(45 + Math.random() * 20).toFixed(1)}
-- MACD: ${data.change > 0 ? '金叉' : '死叉'}
-
-**趋势判断：**
-${data.change > 0 ? '价格站上均线，短期趋势向好' : '价格跌破均线，短期趋势偏弱'}
-
-**操作建议：**
-- 止损位: ¥${(data.price * 0.95).toFixed(2)}
-- 止盈位: ¥${(data.price * 1.08).toFixed(2)}
-- 建议: ${data.change > 0 ? '逢低买入' : '观望等待'}
-
-*本分析仅供参考，不构成投资建议*`,
-    burry: `🦔 **${data.name}(${code}) 逆向分析**
-
-**基础数据：**
-- 现价: ¥${data.price.toFixed(2)}
-- 涨跌幅: ${data.change > 0 ? '+' : ''}${data.change.toFixed(2)}%
-- 市盈率(PE): ${data.pe.toFixed(1)}
-- 总市值: ${data.marketCap}
-
-**逆向思考：**
-${data.change < 0 ? '✓ 市场恐慌下跌，可能存在错误定价机会' : '⚠ 市场乐观，需警惕过度泡沫'}
-
-**风险因素：**
-- 市场共识是否过于乐观？
-- 是否有被忽视的风险？
-- 安全边际是否足够？
-
-**逆向建议：**
-${data.change < 0 ? '在控制仓位的前提下，可以考虑分批建仓' : '保持谨慎，等待更好的逆向机会'}
-
-*本分析仅供参考，不构成投资建议*`,
-    quant: `🤖 **${data.name}(${code}) 量化分析**
-
-**基础数据：**
-- 现价: ¥${data.price.toFixed(2)}
-- 涨跌幅: ${data.change > 0 ? '+' : ''}${data.change.toFixed(2)}%
-- 市盈率(PE): ${data.pe.toFixed(1)}
-- 总市值: ${data.marketCap}
-
-**量化指标：**
-- 历史分位: ${(Math.random() * 50 + 25).toFixed(1)}%
-- 波动率: ${(Math.random() * 10 + 5).toFixed(1)}%
-- Beta: ${(Math.random() * 0.5 + 0.8).toFixed(2)}
-- 夏普比率: ${(Math.random() * 1 + 0.5).toFixed(2)}
-
-**统计信号：**
-${data.change > 0 ? '短期动能指标偏多' : '短期动能指标偏空'}
-
-**量化结论：**
-建议关注均值回归机会，当前 ${data.pe < 15 ? '估值偏低' : '估值合理偏高'}
-
-*本分析仅供参考，不构成投资建议*`,
-  };
-
-  return {
-    id: (Date.now() + 1).toString(),
-    role: 'analyst',
-    content: responses[analyst.id] || responses['buffett'],
-    analyst,
-    timestamp: new Date(),
-  };
-}

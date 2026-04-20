@@ -1,0 +1,127 @@
+{
+  "project": "FinancePulse - 中国市场AI金融助手",
+  "branchName": "feat/superpowers-redesign-v2",
+  "description": "AI驱动的中国金融市场仪表板，整合20项金融技能，支持多智能体分析",
+  "userStories": [
+    {
+      "id": "NAV-001",
+      "title": "导航重构 - 精简首页和底部标签",
+      "description": "首页包含所有后续内容，底部标签作用不明显，需要重新设计导航结构",
+      "acceptanceCriteria": [
+        "底部导航从7个标签简化为4个: 首页/数据/分析/我的",
+        "首页精简为今日摘要 + 快捷操作入口",
+        "数据中心整合市场/宏观/情绪三个Tab",
+        "TypeScript编译通过"
+      ],
+      "priority": 1,
+      "passes": true,
+      "notes": "已完成 HomePage, DataPage, AnalysisPage, MinePage"
+    },
+    {
+      "id": "DATA-001",
+      "title": "数据更新频率配置",
+      "description": "确认数据更新频率，设计更新调度系统",
+      "acceptanceCriteria": [
+        "定义DataType枚举(18种数据类型)",
+        "定义UpdateFrequency枚举(6种频率)",
+        "DATA_UPDATE_CONFIG配置表",
+        "getNextUpdateTime辅助函数",
+        "交易时段判断逻辑"
+      ],
+      "priority": 2,
+      "passes": true,
+      "notes": "已完成 src/services/data/updateConfig.ts"
+    },
+    {
+      "id": "DATA-002",
+      "title": "数据分类体系完善",
+      "description": "完善数据分类，设计数据库存储方案",
+      "acceptanceCriteria": [
+        "市场数据: Quote, KLine, NorthboundData",
+        "宏观数据: MacroIndicator (GDP/CPI/PMI/LPR)",
+        "情绪数据: FearGreedIndex, SentimentSignal",
+        "资讯数据: NewsItem, ResearchReport",
+        "用户数据: WatchlistItem, Position"
+      ],
+      "priority": 3,
+      "passes": true,
+      "notes": "已完成 src/services/data/types.ts"
+    },
+    {
+      "id": "AI-001",
+      "title": "多智能体分析架构",
+      "description": "参考ValueCell和AI-Hedge-Fund，实现真实的多智能体分析系统",
+      "acceptanceCriteria": [
+        "定义Agent接口(BaseAgent)",
+        "定义AgentSignal类型",
+        "实现Orchestrator编排器",
+        "实现LLM服务封装(OpenAI/Anthropic)",
+        "Agent并行获取数据",
+        "LLM整合分析生成建议",
+        "分析结果缓存"
+      ],
+      "priority": 4,
+      "passes": false,
+      "notes": "进行中 - 当前只有模拟数据，需要实现真实LLM调用"
+    },
+    {
+      "id": "AI-002",
+      "title": "分析师智能体实现",
+      "description": "实现6位预设分析师智能体",
+      "acceptanceCriteria": [
+        "价值大师(Buffett) - 内在价值、安全边际",
+        "成长猎手(Lynch) - PEG分析、成长股",
+        "宏观大师(Dalio) - 货币政策、汇率",
+        "技术派(Technical) - K线、RSI/MACD",
+        "逆向投资者(Burry) - 逆向投资",
+        "量化分析师(Quant) - 统计套利"
+      ],
+      "priority": 5,
+      "passes": false,
+      "notes": "待实现 - 需要接入真实数据源"
+    },
+    {
+      "id": "AI-003",
+      "title": "AI分析师对话界面",
+      "description": "优化对话界面，支持多分析师协作和模板选择",
+      "acceptanceCriteria": [
+        "分析师选择器支持多选",
+        "对话框输入股票/基金代码",
+        "下拉列表选择预设模板",
+        "分析进度显示",
+        "错误处理和重试"
+      ],
+      "priority": 6,
+      "passes": false,
+      "notes": "待优化 - ChatInterface需要接入真实LLM服务"
+    },
+    {
+      "id": "STORE-001",
+      "title": "数据持久化存储",
+      "description": "实现IndexedDB本地存储",
+      "acceptanceCriteria": [
+        "自选股存储",
+        "持仓记录存储",
+        "历史分析结果缓存",
+        "设置项持久化"
+      ],
+      "priority": 7,
+      "passes": false,
+      "notes": "待实现"
+    },
+    {
+      "id": "UI-001",
+      "title": "UI/UX优化",
+      "description": "根据frontend-design skill优化界面",
+      "acceptanceCriteria": [
+        "玻璃态效果(Glassmorphism)",
+        "渐变和光晕效果",
+        "流畅动画",
+        "深色主题"
+      ],
+      "priority": 8,
+      "passes": true,
+      "notes": "已完成 - Card, MetricCard, Badge组件优化"
+    }
+  ]
+}

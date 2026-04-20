@@ -1,0 +1,80 @@
+{
+  "project": "FinancePulse AI多智能体分析系统",
+  "branchName": "feat/superpowers-redesign-v2",
+  "description": "参考ValueCell和AI-Hedge-Fund，构建多智能体分析系统",
+  "userStories": [
+    {
+      "id": "AI-001",
+      "title": "导航重构 - 精简首页和底部标签",
+      "description": "首页包含所有后续内容，底部标签作用不明显，需要重新设计",
+      "acceptanceCriteria": [
+        "底部导航从7个标签简化为4个: 首页/数据/分析/我的",
+        "首页精简为今日摘要 + 快捷操作入口",
+        "数据中心整合市场/宏观/情绪三个Tab",
+        "TypeScript编译通过"
+      ],
+      "priority": 1,
+      "passes": true,
+      "notes": "已完成 - 新增HomePage, DataPage, AnalysisPage, MinePage"
+    },
+    {
+      "id": "AI-002",
+      "title": "数据更新频率配置",
+      "description": "确认数据更新频率，设计更新调度系统",
+      "acceptanceCriteria": [
+        "定义DataType枚举，包含18种数据类型",
+        "定义UpdateFrequency枚举",
+        "DATA_UPDATE_CONFIG配置表",
+        "getNextUpdateTime辅助函数",
+        "TypeScript编译通过"
+      ],
+      "priority": 2,
+      "passes": true,
+      "notes": "已完成 - src/services/data/updateConfig.ts"
+    },
+    {
+      "id": "AI-003",
+      "title": "数据分类体系完善",
+      "description": "完善数据分类，设计数据库存储方案",
+      "acceptanceCriteria": [
+        "市场数据: 行情、K线、资金流向、北向资金",
+        "宏观数据: GDP、CPI、PMI、LPR、货币供应",
+        "情绪数据: 恐惧贪婪、涨跌停、两融余额",
+        "资讯数据: 新闻、公告、研报",
+        "TypeScript类型定义完整"
+      ],
+      "priority": 3,
+      "passes": true,
+      "notes": "已完成 - src/services/data/types.ts"
+    },
+    {
+      "id": "AI-004",
+      "title": "多智能体分析架构",
+      "description": "参考ValueCell和AI-Hedge-Fund，实现多智能体编排",
+      "acceptanceCriteria": [
+        "定义Agent接口和信号类型",
+        "实现Orchestrator编排器",
+        "实现LLM服务封装",
+        "各Agent并行获取数据",
+        "LLM整合分析生成建议"
+      ],
+      "priority": 4,
+      "passes": false,
+      "notes": "进行中 - 当前只有模拟数据，需要实现真实LLM调用"
+    },
+    {
+      "id": "AI-005",
+      "title": "AI分析师对话界面优化",
+      "description": "优化对话界面，支持多分析师协作",
+      "acceptanceCriteria": [
+        "分析师选择器支持多选",
+        "对话框输入股票/基金代码",
+        "下拉列表选择预设模板",
+        "加载状态和错误处理"
+      ],
+      "priority": 5,
+      "passes": false,
+      "notes": "待优化 - 当前ChatInterface需要接入真实LLM"
+    }
+  ]
+}
