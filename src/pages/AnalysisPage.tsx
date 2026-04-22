@@ -1,7 +1,35 @@
 import { useState } from 'react';
 import { ChatInterface } from '../components/analysis/ChatInterface';
-import { analysts, Analyst, analysisTemplates } from '../services/analysts';
+import { ALL_AGENTS } from '../services/analysis/agentConfig';
 import { Card } from '../components';
+
+// 简化分析师接口
+interface Analyst {
+  id: string;
+  name: string;
+  nameCn: string;
+  avatar: string;
+  style: string;
+  description: string;
+}
+
+// 转换 AgentConfig 为简化格式
+const analysts: Analyst[] = ALL_AGENTS.slice(0, 6).map(agent => ({
+  id: agent.id,
+  name: agent.nameCn,
+  nameCn: agent.nameCn,
+  avatar: agent.avatar,
+  style: agent.style,
+  description: agent.description,
+}));
+
+// 预设模板
+const analysisTemplates = [
+  { id: 'value', title: '价值投资', description: '巴菲特+格雷厄姆+达莫达兰', analysts: ['warren_buffett', 'ben_graham', 'aswath_damodaran'] },
+  { id: 'growth', title: '成长投资', description: '彼得·林奇+凯西·伍德', analysts: ['peter_lynch', 'cathie_wood'] },
+  { id: 'contrarian', title: '逆向投资', description: '伯里+塔勒布', analysts: ['michael_burry', 'nassim_taleb'] },
+  { id: 'macro', title: '宏观策略', description: '德鲁肯米勒+宏观分析', analysts: ['stanley_druckenmiller'] },
+];
 
 export function AnalysisPage() {
   const [selectedAnalyst, setSelectedAnalyst] = useState<Analyst | null>(null);

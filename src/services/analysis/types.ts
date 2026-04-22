@@ -4,6 +4,55 @@
  * 参考 AI Hedge Fund 和 ValueCell 架构
  */
 
+// ========== Agent 分类 ==========
+
+export enum AgentCategory {
+  /** 投资大师 */
+  INVESTMENT_MASTER = 'investment_master',
+  /** 行业专家 */
+  INDUSTRY_EXPERT = 'industry_expert',
+  /** 量化分析师 */
+  QUANT_ANALYST = 'quant_analyst',
+  /** 风控专家 */
+  RISK_MANAGER = 'risk_manager',
+  /** 辩论专家 */
+  DEBATE_EXPERT = 'debate_expert',
+}
+
+// ========== Agent 类型 ==========
+
+export enum AgentType {
+  // 投资大师类型
+  VALUE_INVESTOR = 'value_investor',
+  GROWTH_INVESTOR = 'growth_investor',
+  CONTRARIAN = 'contrarian',
+  SECURITY_ANALYST = 'security_analyst',
+  MULTI_DISCIPLINARY = 'multi_disciplinary',
+  RISK_ANALYST = 'risk_analyst',
+  
+  // 行业专家类型
+  ACTIVIST = 'activist',
+  MACRO_INVESTOR = 'macro_investor',
+  VALUATION_EXPERT = 'valuation_expert',
+  
+  // 量化分析师类型
+  VALUATION = 'valuation',
+  TECHNICAL = 'technical',
+  SENTIMENT = 'sentiment',
+  FUNDAMENTAL = 'fundamental',
+  
+  // 风控专家类型
+  RISK_MANAGER = 'risk_manager',
+  PORTFOLIO_MANAGER = 'portfolio_manager',
+  
+  // 辩论专家类型
+  BULLISH_RESEARCHER = 'bullish_researcher',
+  BEARISH_RESEARCHER = 'bearish_researcher',
+  
+  // 通用类型
+  GENERALIST = 'generalist',
+}
+
 // ========== 基础类型 ==========
 
 export interface StockData {
@@ -30,6 +79,7 @@ export type SignalType = 'bullish' | 'bearish' | 'neutral';
 
 export interface AgentSignal {
   agent: string;           // Agent 名称
+  agentId: string;          // Agent ID
   signal: SignalType;      // 信号类型
   confidence: number;      // 置信度 0-100
   reasoning: string;       // 分析理由
@@ -88,7 +138,7 @@ export interface BaseAgent {
 
 // ========== LLM 配置 ==========
 
-export type LLMProvider = 'openai' | 'anthropic' | 'deepseek';
+export type LLMProvider = 'openai' | 'anthropic' | 'deepseek' | 'mock';
 
 export interface LLMConfig {
   provider: LLMProvider;
@@ -98,7 +148,7 @@ export interface LLMConfig {
 }
 
 export interface LLMMessage {
-  role: string;
+  role: 'system' | 'user' | 'assistant';
   content: string;
 }
 
@@ -131,4 +181,16 @@ export interface AnalysisCache {
   stockData: Map<string, CacheEntry<StockData>>;
   agentSignals: Map<string, CacheEntry<AgentSignal[]>>;
   analysisResults: Map<string, CacheEntry<AnalysisResponse>>;
+}
+
+// ========== 分析师选择器配置 ==========
+
+export interface AnalystSelectorOption {
+  id: string;
+  name: string;
+  nameCn: string;
+  category: AgentCategory;
+  style: string;
+  avatar: string;
+  description: string;
 }

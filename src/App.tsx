@@ -16,6 +16,7 @@ import {
   Tools,
   StrategicAnalysis,
 } from './pages';
+import { initializeAutoUpdate } from './stores/useMarketStore';
 
 interface HeaderProps {
   lastUpdate: Date | null;
@@ -90,7 +91,6 @@ function Header({ lastUpdate, onRefresh, isRefreshing }: HeaderProps) {
 function BottomNav() {
   const location = useLocation();
 
-  // 简化的底部导航 - 将在新结构中逐步替换为 SimplifiedNav
   return (
     <nav className="fixed bottom-0 left-0 right-0 z-50 glass border-t border-white/5 safe-bottom">
       <div className="max-w-lg mx-auto px-4 py-2">
@@ -139,6 +139,11 @@ function App() {
       setLastUpdate(new Date());
       setIsRefreshing(false);
     }, 800);
+  }, []);
+
+  // 初始化自动更新服务
+  useEffect(() => {
+    initializeAutoUpdate();
   }, []);
 
   useEffect(() => {

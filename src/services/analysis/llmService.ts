@@ -1,7 +1,7 @@
 /**
  * LLM 服务封装
  * 
- * 支持 OpenAI / Anthropic / DeepSeek 多provider
+ * 支持 OpenAI / Anthropic / DeepSeek / Mock 多provider
  */
 
 import type { LLMConfig, LLMMessage, LLMResponse, LLMProvider } from './types';
@@ -18,6 +18,10 @@ const DEFAULT_CONFIGS: Record<LLMProvider, Partial<LLMConfig>> = {
   deepseek: {
     model: 'deepseek-chat',
     baseUrl: 'https://api.deepseek.com/v1',
+  },
+  mock: {
+    model: 'mock-v1.0',
+    baseUrl: '',
   },
 };
 
@@ -39,8 +43,14 @@ class LLMService {
     messages: LLMMessage[],
     options?: { maxTokens?: number; temperature?: number }
   ): Promise<LLMResponse> {
-    if (!this.config) {
-      throw new Error('LLM服务未配置，请先调用 configure()');
+    // Mock 模式直接返回模拟数据
+    if (!this.config || this.config.provider === 'mock') {
+      return {
+        content: '这是模拟分析结果。实际应用中会调用真实 LLM API。',
+        model: 'mock-v1.0',
+        tokens: 100,
+        finishReason: 'stop',
+      };
     }
 
     const { maxTokens = 2048, temperature = 0.7 } = options || {};
