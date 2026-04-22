@@ -35,6 +35,7 @@ const settings = [
 const tabs = [
   { id: 'watchlist', label: '自选股', icon: '⭐' },
   { id: 'position', label: '仓位', icon: '🎯' },
+  { id: 'tools', label: '工具箱', icon: '🧰' },
   { id: 'settings', label: '设置', icon: '⚙️' },
 ];
 
@@ -122,7 +123,7 @@ export function MinePage() {
         </div>
       )}
 
-      {/* 仓位管理 */}
+      {/* 仓位管理 (position-management skill) */}
       {activeTab === 'position' && (
         <div className="space-y-4">
           {/* 仓位概览 */}
@@ -141,7 +142,7 @@ export function MinePage() {
                 <span>100%</span>
               </div>
               <div className="h-4 bg-gray-700 rounded-full overflow-hidden">
-                <div className="h-full bg-gradient-to-r from-finance-green via-finance-yellow to-finance-red rounded-full relative">
+                <div className="h-full bg-gradient-to-r from-accent-green via-accent-yellow to-accent-red rounded-full relative">
                   <div className="absolute top-0 bottom-0 left-1/3 w-1/3 bg-white/20 border-l border-r border-white/30" />
                   <div
                     className="absolute top-1/2 -translate-y-1/2 w-3 h-6 bg-white rounded shadow-lg"
@@ -161,13 +162,13 @@ export function MinePage() {
               </div>
               <div className="text-center">
                 <div className="text-xs text-gray-500 mb-1">盈亏</div>
-                <div className={`text-lg font-bold font-mono ${totalProfit >= 0 ? 'text-finance-green' : 'text-finance-red'}`}>
+                <div className={`text-lg font-bold font-mono ${totalProfit >= 0 ? 'text-accent-green' : 'text-accent-red'}`}>
                   {totalProfit >= 0 ? '+' : ''}¥{totalProfit.toLocaleString()}
                 </div>
               </div>
               <div className="text-center">
                 <div className="text-xs text-gray-500 mb-1">收益率</div>
-                <div className={`text-lg font-bold font-mono ${parseFloat(profitPercent) >= 0 ? 'text-finance-green' : 'text-finance-red'}`}>
+                <div className={`text-lg font-bold font-mono ${parseFloat(profitPercent) >= 0 ? 'text-accent-green' : 'text-accent-red'}`}>
                   {parseFloat(profitPercent) >= 0 ? '+' : ''}{profitPercent}%
                 </div>
               </div>
@@ -179,12 +180,112 @@ export function MinePage() {
             <div className="space-y-3">
               {positionData.rules.map((rule, index) => (
                 <div key={index} className="flex items-start gap-3">
-                  <div className="w-6 h-6 rounded-full bg-finance-green/20 flex items-center justify-center flex-shrink-0">
-                    <span className="text-finance-green text-sm">✓</span>
+                  <div className="w-6 h-6 rounded-full bg-accent-green/20 flex items-center justify-center flex-shrink-0">
+                    <span className="text-accent-green text-sm">✓</span>
                   </div>
                   <span className="text-sm text-gray-300">{rule}</span>
                 </div>
               ))}
+            </div>
+          </Card>
+        </div>
+      )}
+
+      {/* 工具箱 (currency + money-radar skills) */}
+      {activeTab === 'tools' && (
+        <div className="space-y-4">
+          <Card title="汇率工具 (currency-converter)">
+            <div className="space-y-4">
+              <div className="flex gap-2 items-center">
+                <input
+                  type="number"
+                  placeholder="金额"
+                  defaultValue={100}
+                  className="flex-1 bg-surface-200/50 rounded-xl px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-accent-blue/50"
+                />
+                <select className="bg-surface-200/50 rounded-xl px-4 py-3 text-white focus:outline-none">
+                  <option value="USD">USD</option>
+                  <option value="EUR">EUR</option>
+                  <option value="JPY">JPY</option>
+                  <option value="HKD">HKD</option>
+                </select>
+                <span className="text-gray-400">→</span>
+                <div className="flex-1 bg-accent-blue/20 rounded-xl px-4 py-3 text-accent-blue font-mono">
+                  ¥724.00 CNY
+                </div>
+              </div>
+            </div>
+          </Card>
+
+          <Card title="中文口语换算 (currency-converter-zh)">
+            <div className="bg-surface-200/50 rounded-xl p-4">
+              <div className="text-gray-300">
+                <span className="text-accent-blue font-medium">100美元</span>
+                <span className="text-gray-500 mx-2">相当于</span>
+                <span className="text-accent-green font-medium">724元人民币</span>
+              </div>
+            </div>
+          </Card>
+
+          <Card title="换汇渠道对比 (currency-conversion)">
+            <div className="space-y-2">
+              <div className="flex justify-between items-center p-3 bg-accent-green/10 rounded-xl">
+                <div className="flex items-center gap-2">
+                  <span className="text-lg">🏦</span>
+                  <span className="text-white">银行</span>
+                </div>
+                <div className="text-right">
+                  <span className="text-accent-green font-bold">7.24</span>
+                  <span className="text-xs text-accent-green ml-2">⭐推荐</span>
+                </div>
+              </div>
+              <div className="flex justify-between items-center p-3 bg-surface-200/30 rounded-xl">
+                <div className="flex items-center gap-2">
+                  <span className="text-lg">📱</span>
+                  <span className="text-white">支付宝</span>
+                </div>
+                <span className="text-white font-bold">7.23</span>
+              </div>
+              <div className="flex justify-between items-center p-3 bg-surface-200/30 rounded-xl">
+                <div className="flex items-center gap-2">
+                  <span className="text-lg">💬</span>
+                  <span className="text-white">微信</span>
+                </div>
+                <span className="text-white font-bold">7.22</span>
+              </div>
+              <div className="flex justify-between items-center p-3 bg-accent-red/10 rounded-xl">
+                <div className="flex items-center gap-2">
+                  <span className="text-lg">✈️</span>
+                  <span className="text-white">机场兑换</span>
+                </div>
+                <span className="text-accent-red font-bold">7.15</span>
+                <span className="text-xs text-accent-red ml-2">汇率最差</span>
+              </div>
+            </div>
+          </Card>
+
+          <Card title="金融产品推荐 (money-radar)">
+            <div className="space-y-3">
+              <div className="p-3 bg-surface-200/50 rounded-xl cursor-pointer hover:bg-surface-200 transition-colors">
+                <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center gap-2">
+                    <span className="text-xl">📈</span>
+                    <span className="text-white font-medium">华泰证券</span>
+                  </div>
+                  <Badge text="热门" variant="green" />
+                </div>
+                <div className="text-sm text-gray-400">开户即送Level2行情 + 佣金万一</div>
+              </div>
+              <div className="p-3 bg-surface-200/50 rounded-xl cursor-pointer hover:bg-surface-200 transition-colors">
+                <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center gap-2">
+                    <span className="text-xl">💳</span>
+                    <span className="text-white font-medium">招商银行</span>
+                  </div>
+                  <Badge text="新客" variant="blue" />
+                </div>
+                <div className="text-sm text-gray-400">新客理财年化3.5%</div>
+              </div>
             </div>
           </Card>
         </div>
