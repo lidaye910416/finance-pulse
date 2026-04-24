@@ -32,11 +32,11 @@ interface SettingsState {
   setApiKey: (apiKey: string) => void;
 }
 
-// ========== 默认配置 ==========
+// ========== 默认配置 (不包含 API Key，用户需要自行输入) ==========
 
 const DEFAULT_LLM_CONFIG: LLMConfig = {
   provider: 'minimax',
-  apiKey: 'sk-cp-tV4TuUIpZt64tdZO3kjFDIydJtrgaSDPDAXNo8zYk8CTHD39wz7vg1JN7_Dqd8LpevwJo-ZozDcpRo1REhX3PaCak4A8M-Rl8MXAEMvGbMoNOSi73B27yoM',
+  apiKey: '',  // 用户必须自行输入 API Key
   model: 'MiniMax-M2.7-0508',
   baseUrl: 'https://api.minimaxi.com/anthropic',
 };
