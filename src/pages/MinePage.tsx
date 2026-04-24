@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Card, Badge } from '../components';
+import { LLMSettings } from '../components/settings/LLMSettings';
 
 // 自选股数据
 const watchlist = [
@@ -41,6 +42,7 @@ const tabs = [
 
 export function MinePage() {
   const [activeTab, setActiveTab] = useState('watchlist');
+  const [showLLMSettings, setShowLLMSettings] = useState(false);
 
   const totalProfit = positionData.totalValue - positionData.totalCost;
   const profitPercent = (totalProfit / positionData.totalCost * 100).toFixed(2);
@@ -123,10 +125,9 @@ export function MinePage() {
         </div>
       )}
 
-      {/* 仓位管理 (position-management skill) */}
+      {/* 仓位管理 */}
       {activeTab === 'position' && (
         <div className="space-y-4">
-          {/* 仓位概览 */}
           <Card>
             <div className="text-center mb-4">
               <div className="text-gray-400 text-sm mb-1">当前建议仓位</div>
@@ -134,7 +135,6 @@ export function MinePage() {
               <Badge text="冰点/修复阶段" variant="green" />
             </div>
 
-            {/* 仓位滑块 */}
             <div className="relative pt-6 pb-4">
               <div className="flex justify-between text-xs text-gray-500 mb-2">
                 <span>0%</span>
@@ -152,7 +152,6 @@ export function MinePage() {
               </div>
             </div>
 
-            {/* 账户概览 */}
             <div className="grid grid-cols-3 gap-3 mt-4 pt-4 border-t border-white/5">
               <div className="text-center">
                 <div className="text-xs text-gray-500 mb-1">总市值</div>
@@ -175,7 +174,6 @@ export function MinePage() {
             </div>
           </Card>
 
-          {/* 五条仓位铁律 */}
           <Card title="五条仓位铁律">
             <div className="space-y-3">
               {positionData.rules.map((rule, index) => (
@@ -191,10 +189,10 @@ export function MinePage() {
         </div>
       )}
 
-      {/* 工具箱 (currency + money-radar skills) */}
+      {/* 工具箱 */}
       {activeTab === 'tools' && (
         <div className="space-y-4">
-          <Card title="汇率工具 (currency-converter)">
+          <Card title="汇率工具">
             <div className="space-y-4">
               <div className="flex gap-2 items-center">
                 <input
@@ -217,17 +215,7 @@ export function MinePage() {
             </div>
           </Card>
 
-          <Card title="中文口语换算 (currency-converter-zh)">
-            <div className="bg-surface-200/50 rounded-xl p-4">
-              <div className="text-gray-300">
-                <span className="text-accent-blue font-medium">100美元</span>
-                <span className="text-gray-500 mx-2">相当于</span>
-                <span className="text-accent-green font-medium">724元人民币</span>
-              </div>
-            </div>
-          </Card>
-
-          <Card title="换汇渠道对比 (currency-conversion)">
+          <Card title="换汇渠道对比">
             <div className="space-y-2">
               <div className="flex justify-between items-center p-3 bg-accent-green/10 rounded-xl">
                 <div className="flex items-center gap-2">
@@ -253,18 +241,10 @@ export function MinePage() {
                 </div>
                 <span className="text-white font-bold">7.22</span>
               </div>
-              <div className="flex justify-between items-center p-3 bg-accent-red/10 rounded-xl">
-                <div className="flex items-center gap-2">
-                  <span className="text-lg">✈️</span>
-                  <span className="text-white">机场兑换</span>
-                </div>
-                <span className="text-accent-red font-bold">7.15</span>
-                <span className="text-xs text-accent-red ml-2">汇率最差</span>
-              </div>
             </div>
           </Card>
 
-          <Card title="金融产品推荐 (money-radar)">
+          <Card title="金融产品推荐">
             <div className="space-y-3">
               <div className="p-3 bg-surface-200/50 rounded-xl cursor-pointer hover:bg-surface-200 transition-colors">
                 <div className="flex items-center justify-between mb-2">
@@ -294,6 +274,23 @@ export function MinePage() {
       {/* 设置 */}
       {activeTab === 'settings' && (
         <div className="space-y-4">
+          {/* LLM 设置入口 */}
+          <Card
+            className="cursor-pointer hover:border-accent-blue/30 transition-all"
+            onClick={() => setShowLLMSettings(true)}
+          >
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <span className="text-2xl">🤖</span>
+                <div>
+                  <div className="text-white font-medium">AI 模型设置</div>
+                  <div className="text-xs text-gray-400">配置 LLM 提供商和 API Key</div>
+                </div>
+              </div>
+              <span className="text-accent-blue">→</span>
+            </div>
+          </Card>
+
           <Card title="通知设置">
             <div className="space-y-3">
               {settings.slice(0, 3).map((setting) => (
@@ -307,9 +304,6 @@ export function MinePage() {
                       w-12 h-6 rounded-full transition-colors relative
                       ${setting.value ? 'bg-accent-blue' : 'bg-gray-600'}
                     `}
-                    onClick={() => {
-                      // Toggle logic
-                    }}
                   >
                     <div
                       className={`
@@ -350,10 +344,21 @@ export function MinePage() {
               </div>
               <div className="flex justify-between">
                 <span className="text-gray-400">构建时间</span>
-                <span className="text-white">2026-04-20</span>
+                <span className="text-white">2026-04-22</span>
               </div>
             </div>
           </Card>
+        </div>
+      )}
+
+      {/* LLM 设置弹窗 */}
+      {showLLMSettings && (
+        <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="w-full max-w-md bg-surface-100 rounded-2xl border border-white/10 shadow-xl overflow-hidden">
+            <div className="p-4 border-b border-white/10">
+              <LLMSettings onClose={() => setShowLLMSettings(false)} />
+            </div>
+          </div>
         </div>
       )}
     </div>
