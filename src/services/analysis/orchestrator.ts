@@ -6,8 +6,8 @@
  * 
  * 工作流程:
  * 1. 数据收集阶段 - 并行获取各维度数据
- * 2. Agent 分析阶段 - 各分析师独立分析
- * 3. 辩论阶段 (可选) - 多空双方辩论
+ * 2. Agent 分析阶段 - 各分析师独立分析 (调用 MiniMax LLM)
+ * 3. 辩论阶段 - 多空双方辩论
  * 4. 综合阶段 - 汇总各 Agent 意见
  * 5. 风险评估 - 风控 Agent 出具风险报告
  * 6. 最终决策 - Portfolio Manager 给出最终建议
@@ -25,6 +25,7 @@ import {
   getAgentConfig,
   ANALYST_TEMPLATES,
 } from './agentConfig';
+import { llmService } from './llmService';
 
 // ========== 数据收集阶段 ==========
 
@@ -32,8 +33,6 @@ import {
  * 获取股票实时数据
  */
 async function fetchStockData(code: string): Promise<StockData> {
-  // 实际应用中应该调用真实 API
-  // 这里使用模拟数据
   const mockData: Record<string, StockData> = {
     '600519': {
       code: '600519',
@@ -104,10 +103,68 @@ async function fetchStockData(code: string): Promise<StockData> {
   };
 }
 
-// ========== Agent 分析阶段 ==========
+// ========== LLM Prompt 构建 ==========
 
 /**
- * 执行单个 Agent 的分析
+ * 构建分析师的 prompt
+ */
+function buildAnalysisPrompt(agentConfig: { systemPrompt: string; nameCn: string }, stockData: StockData): string {
+  return `你是一位专业的股票分析师。
+
+分析目标：${stockData.name}（${stockData.code}）
+
+当前数据：
+- 当前价格: ¥${stockData.price.toFixed(2)}
+- 涨跌幅: ${stockData.changePercent > 0 ? '+' : ''}${stockData.changePercent.toFixed(2)}%
+- 开盘价: ¥${stockData.open.toFixed(2)}
+- 最高价: ¥${stockData.high.toFixed(2)}
+- 最低价: ¥${stockData.low.toFixed(2)}
+- 市盈率(PE): ${stockData.pe || '未知'}
+- 市净率(PB): ${stockData.pb || '未知'}
+- 总市值: ${stockData.marketCap || '未知'}
+
+请以${agentConfig.nameCn}的风格，分析这只股票的投资价值。
+
+请用JSON格式返回分析结果：
+{
+  "signal": "bullish" | "bearish" | "neutral",
+  "confidence": 0-100,
+  "reasoning": "分析理由（100字以内）",
+  "highlights": ["要点1", "要点2", "要点3"]
+}`;
+}
+
+// ========== Agent 分析阶段 (真实 LLM 调用) ==========
+
+/**
+ * 解析 LLM 返回的 JSON
+ */
+function parseLLMResponse(content: string): { signal: SignalType; confidence: number; reasoning: string } {
+  try {
+    // 尝试提取 JSON
+    const jsonMatch = content.match(/\{[\s\S]*\}/);
+    if (jsonMatch) {
+      const data = JSON.parse(jsonMatch[0]);
+      return {
+        signal: data.signal || 'neutral',
+        confidence: Math.min(100, Math.max(0, parseInt(data.confidence) || 50)),
+        reasoning: data.reasoning || data.highlights?.join('；') || '分析完成',
+      };
+    }
+  } catch (e) {
+    console.error('[Orchestrator] 解析 LLM 响应失败:', e);
+  }
+  
+  // 默认值
+  return {
+    signal: 'neutral',
+    confidence: 50,
+    reasoning: content.slice(0, 100),
+  };
+}
+
+/**
+ * 执行单个 Agent 的分析 (调用 MiniMax LLM)
  */
 async function executeAgent(
   agentId: string,
@@ -125,101 +182,173 @@ async function executeAgent(
     };
   }
 
-  // 模拟 Agent 分析过程
-  // 实际应用中应该调用 LLM API
-  await new Promise(resolve => setTimeout(resolve, Math.random() * 500 + 200));
-
-  // 根据分析师风格生成模拟信号
-  let signal: SignalType = 'neutral';
-  let confidence = Math.floor(Math.random() * 30) + 40; // 40-70%
-  let reasoning = '';
-
-  // 技术面分析
-  if (stockData.changePercent > 2) {
-    signal = 'bullish';
-    confidence = Math.min(90, confidence + 15);
-    reasoning = `近期上涨${stockData.changePercent.toFixed(2)}%，趋势向好`;
-  } else if (stockData.changePercent < -2) {
-    signal = 'bearish';
-    confidence = Math.min(85, confidence + 10);
-    reasoning = `近期下跌${Math.abs(stockData.changePercent).toFixed(2)}%，需谨慎`;
+  console.log(`[Orchestrator] ${agentConfig.nameCn} 正在分析 ${stockData.code}...`);
+  
+  try {
+    // 构建 prompt
+    const prompt = buildAnalysisPrompt(agentConfig, stockData);
+    
+    // 调用 MiniMax LLM
+    const response = await llmService.complete([
+      { role: 'system', content: agentConfig.systemPrompt },
+      { role: 'user', content: prompt },
+    ], {
+      maxTokens: 500,
+      temperature: 0.7,
+    });
+    
+    console.log(`[Orchestrator] ${agentConfig.nameCn} 分析完成`);
+    
+    // 解析响应
+    const { signal, confidence, reasoning } = parseLLMResponse(response.content);
+    
+    return {
+      agent: agentConfig.nameCn,
+      agentId,
+      signal,
+      confidence,
+      reasoning,
+      data: {
+        price: stockData.price,
+        change: stockData.changePercent,
+        pe: stockData.pe,
+        pb: stockData.pb,
+        model: response.model,
+        tokens: response.tokens,
+      },
+    };
+  } catch (error) {
+    console.error(`[Orchestrator] ${agentConfig.nameCn} 分析失败:`, error);
+    
+    // 失败时返回默认信号
+    return {
+      agent: agentConfig.nameCn,
+      agentId,
+      signal: 'neutral',
+      confidence: 30,
+      reasoning: `分析服务暂时不可用: ${error instanceof Error ? error.message : '未知错误'}`,
+      data: {},
+    };
   }
-
-  // PE 估值分析
-  if (stockData.pe && stockData.pe < 20) {
-    reasoning += `\n市盈率${stockData.pe}，估值偏低`;
-  } else if (stockData.pe && stockData.pe > 40) {
-    signal = stockData.changePercent > 0 ? 'neutral' : 'bearish';
-    reasoning += `\n市盈率${stockData.pe}，估值偏高`;
-  }
-
-  // 根据分析师特性调整
-  if (agentConfig.category === 'investment_master') {
-    reasoning += `\n从${agentConfig.nameCn}的${agentConfig.style}角度来看，`;
-    reasoning += stockData.pe && stockData.pe < 25 
-      ? '当前估值具有安全边际，适合长期持有' 
-      : '需要等待更好的买入时机';
-  } else if (agentConfig.type === 'technical') {
-    reasoning += `\n技术面显示`;
-    reasoning += stockData.changePercent > 0 ? '短期动能较强' : '短期动能较弱';
-  }
-
-  return {
-    agent: agentConfig.nameCn,
-    agentId,
-    signal,
-    confidence,
-    reasoning,
-    data: {
-      price: stockData.price,
-      change: stockData.changePercent,
-      pe: stockData.pe,
-      pb: stockData.pb,
-    },
-  };
 }
 
 // ========== 辩论阶段 ==========
 
 /**
- * 执行多空辩论
+ * 执行多空辩论 (调用 MiniMax LLM)
  */
 async function executeDebate(
   signals: AgentSignal[],
   stockData: StockData
 ): Promise<{bullish: AgentSignal; bearish: AgentSignal}> {
-  // 模拟辩论过程
-  await new Promise(resolve => setTimeout(resolve, 500));
+  console.log('[Orchestrator] 多空辩论开始...');
+  
+  const bullishSignals = signals.filter(s => s.signal === 'bullish');
+  const bearishSignals = signals.filter(s => s.signal === 'bearish');
+  
+  // 多头研究员
+  const bullishPrompt = `
+你是多头研究员，负责从正面角度分析股票。
 
-  const bullishSignal = signals.find(s => s.signal === 'bullish');
-  const bearishSignal = signals.find(s => s.signal === 'bearish');
+当前分析股票：${stockData.name}（${stockData.code}）
+当前价格：¥${stockData.price.toFixed(2)}
+涨跌幅：${stockData.changePercent > 0 ? '+' : ''}${stockData.changePercent.toFixed(2)}%
 
-  return {
-    bullish: {
-      agent: '多头研究员',
-      agentId: 'bullish_researcher',
-      signal: 'bullish',
-      confidence: bullishSignal 
-        ? Math.min(90, bullishSignal.confidence + 10)
-        : 55,
-      reasoning: bullishSignal 
-        ? `看多理由：${bullishSignal.reasoning}`
-        : `基于当前价格${stockData.price}元，建议关注买入机会`,
-      data: { type: 'bullish' },
-    },
-    bearish: {
-      agent: '空头研究员',
-      agentId: 'bearish_researcher',
-      signal: 'bearish',
-      confidence: bearishSignal 
-        ? Math.min(85, bearishSignal.confidence + 10)
-        : 50,
-      reasoning: bearishSignal 
-        ? `看空理由：${bearishSignal.reasoning}`
-        : `需警惕回调风险，建议观望`,
-      data: { type: 'bearish' },
-    },
-  };
+现有看多分析师：${bullishSignals.map(s => s.agent).join('、') || '暂无'}
+现有看空分析师：${bearishSignals.map(s => s.agent).join('、') || '暂无'}
+
+请给出你的看多理由和投资建议。
+
+请用JSON格式返回：
+{
+  "signal": "bullish",
+  "confidence": 0-100,
+  "reasoning": "看多理由（100字以内）"
+}`;
+
+  // 空头研究员
+  const bearishPrompt = `
+你是空头研究员，负责从负面角度分析股票。
+
+当前分析股票：${stockData.name}（${stockData.code}）
+当前价格：¥${stockData.price.toFixed(2)}
+涨跌幅：${stockData.changePercent > 0 ? '+' : ''}${stockData.changePercent.toFixed(2)}%
+
+现有看多分析师：${bullishSignals.map(s => s.agent).join('、') || '暂无'}
+现有看空分析师：${bearishSignals.map(s => s.agent).join('、') || '暂无'}
+
+请给出你的看空理由和风险提示。
+
+请用JSON格式返回：
+{
+  "signal": "bearish",
+  "confidence": 0-100,
+  "reasoning": "看空理由（100字以内）"
+}`;
+
+  try {
+    // 并行调用
+    const [bullishResult, bearishResult] = await Promise.all([
+      llmService.complete([
+        { role: 'system', content: '你是专业的多头研究员，擅长发现股票的上涨理由和投资机会。' },
+        { role: 'user', content: bullishPrompt },
+      ], { maxTokens: 300, temperature: 0.7 }),
+      llmService.complete([
+        { role: 'system', content: '你是专业的空头研究员，擅长发现股票的风险和下跌因素。' },
+        { role: 'user', content: bearishPrompt },
+      ], { maxTokens: 300, temperature: 0.7 }),
+    ]);
+
+    const bullish = parseLLMResponse(bullishResult.content);
+    const bearish = parseLLMResponse(bearishResult.content);
+    
+    console.log('[Orchestrator] 多空辩论完成');
+
+    return {
+      bullish: {
+        agent: '多头研究员',
+        agentId: 'bullish_researcher',
+        signal: bullish.signal,
+        confidence: bullish.confidence,
+        reasoning: bullish.reasoning,
+        data: { type: 'bullish' },
+      },
+      bearish: {
+        agent: '空头研究员',
+        agentId: 'bearish_researcher',
+        signal: bearish.signal,
+        confidence: bearish.confidence,
+        reasoning: bearish.reasoning,
+        data: { type: 'bearish' },
+      },
+    };
+  } catch (error) {
+    console.error('[Orchestrator] 辩论失败:', error);
+    
+    // 失败时返回默认
+    return {
+      bullish: {
+        agent: '多头研究员',
+        agentId: 'bullish_researcher',
+        signal: 'bullish',
+        confidence: 55,
+        reasoning: bullishSignals.length > 0 
+          ? `综合看多分析师意见: ${bullishSignals[0].reasoning.slice(0, 50)}...`
+          : '等待更多分析数据',
+        data: { type: 'bullish' },
+      },
+      bearish: {
+        agent: '空头研究员',
+        agentId: 'bearish_researcher',
+        signal: 'bearish',
+        confidence: 50,
+        reasoning: bearishSignals.length > 0
+          ? `综合看空分析师意见: ${bearishSignals[0].reasoning.slice(0, 50)}...`
+          : '需警惕回调风险',
+        data: { type: 'bearish' },
+      },
+    };
+  }
 }
 
 // ========== 风险评估 ==========
@@ -231,34 +360,27 @@ async function executeRiskAssessment(
   signals: AgentSignal[],
   stockData: StockData
 ): Promise<{riskScore: number; maxLoss: number; positionLimit: number; risks: string[]}> {
-  // 统计信号分布
   const bullishCount = signals.filter(s => s.signal === 'bullish').length;
   const bearishCount = signals.filter(s => s.signal === 'bearish').length;
   const neutralCount = signals.filter(s => s.signal === 'neutral').length;
   
-  // 计算风险评分
   let riskScore = 50 + (bearishCount - bullishCount) * 10;
   riskScore = Math.max(20, Math.min(80, riskScore));
   
-  // 波动性风险
   const volatility = Math.abs(stockData.changePercent);
   if (volatility > 5) riskScore += 10;
   else if (volatility > 3) riskScore += 5;
   
-  // 估值风险
   if (stockData.pe && stockData.pe > 50) riskScore += 15;
   else if (stockData.pe && stockData.pe < 15) riskScore -= 10;
   
-  // 最大亏损估算
   const maxLoss = Math.min(50, riskScore * 0.8);
   
-  // 仓位建议
   let positionLimit = 50 - riskScore / 2;
   if (bullishCount > bearishCount) positionLimit += 10;
   if (bearishCount > bullishCount) positionLimit -= 15;
   positionLimit = Math.max(10, Math.min(80, positionLimit));
   
-  // 风险因素
   const risks: string[] = [];
   if (volatility > 3) risks.push('价格波动较大');
   if (stockData.pe && stockData.pe > 40) risks.push('估值偏高');
@@ -279,12 +401,10 @@ async function generateSummary(
   debate: {bullish: AgentSignal; bearish: AgentSignal},
   riskAssessment: {riskScore: number; maxLoss: number; positionLimit: number; risks: string[]}
 ): Promise<AnalysisResponse['summary'] & { recommendation: AnalysisResponse['recommendation'] }> {
-  // 统计信号
   const bullishSignals = signals.filter(s => s.signal === 'bullish');
   const bearishSignals = signals.filter(s => s.signal === 'bearish');
   const avgConfidence = signals.reduce((sum, s) => sum + s.confidence, 0) / signals.length;
   
-  // 决定操作
   let action: 'buy' | 'hold' | 'sell' | 'watch' = 'hold';
   let confidence = Math.round(avgConfidence);
   
@@ -301,7 +421,6 @@ async function generateSummary(
     confidence = Math.max(40, confidence - 15);
   }
   
-  // 生成分析文本
   const text = `
 综合 ${signals.length} 位分析师的观点:
 
@@ -313,8 +432,8 @@ async function generateSummary(
 ${signals.slice(0, 3).map(s => `- ${s.agent}: ${s.signal === 'bullish' ? '看好' : s.signal === 'bearish' ? '看空' : '中性'} (${s.confidence}%置信)`).join('\n')}
 
 **多空辩论:**
-- 多头: ${debate.bullish.reasoning.slice(0, 50)}...
-- 空头: ${debate.bearish.reasoning.slice(0, 50)}...
+- 多头: ${debate.bullish.reasoning.slice(0, 80)}...
+- 空头: ${debate.bearish.reasoning.slice(0, 80)}...
 
 **风险评估:**
 - 风险评分: ${riskAssessment.riskScore}/100
@@ -324,7 +443,7 @@ ${signals.slice(0, 3).map(s => `- ${s.agent}: ${s.signal === 'bullish' ? '看好
   
   return {
     text,
-    model: 'mock-v1.0',
+    model: llmService.getProvider(),
     tokens: Math.floor(text.length / 4),
     recommendation: {
       action,
@@ -362,7 +481,7 @@ export async function executeAnalysis(
     updateProgress({ status: 'running', progress: 5, currentStep: '获取股票数据' });
     const stockData = await fetchStockData(request.code);
     
-    // ===== 阶段 2: Agent 分析 =====
+    // ===== 阶段 2: Agent 分析 (调用 MiniMax LLM) =====
     updateProgress({ status: 'running', progress: 20, currentStep: '分析师正在分析...' });
     
     const signals: AgentSignal[] = [];
@@ -370,7 +489,7 @@ export async function executeAnalysis(
       ? request.analystIds 
       : ['warren_buffett', 'technicals_agent', 'sentiment_agent', 'risk_manager'];
     
-    // 并行执行非风控 Agent
+    // 并行执行非风控 Agent (每个都会调用 LLM)
     const agentPromises = agentIds
       .filter(id => !id.includes('risk_manager') && !id.includes('portfolio'))
       .map(async (agentId, index) => {
@@ -387,7 +506,7 @@ export async function executeAnalysis(
     const agentResults = await Promise.all(agentPromises);
     signals.push(...agentResults);
     
-    // ===== 阶段 3: 辩论 =====
+    // ===== 阶段 3: 辩论 (调用 MiniMax LLM) =====
     updateProgress({ status: 'running', progress: 60, currentStep: '多空辩论中...' });
     const debate = await executeDebate(signals, stockData);
     signals.push(debate.bullish, debate.bearish);
@@ -396,7 +515,6 @@ export async function executeAnalysis(
     updateProgress({ status: 'running', progress: 75, currentStep: '风险评估中...' });
     const riskAssessment = await executeRiskAssessment(signals, stockData);
     
-    // 添加风控 Agent 信号
     signals.push({
       agent: '风险管理师',
       agentId: 'risk_manager',
@@ -451,9 +569,7 @@ export async function executeAnalysis(
   }
 }
 
-// ========== 导出快捷函数 ==========
+// ========== 导出 ==========
 
 export { fetchStockData };
-
-// 导出分析师模板
 export { ANALYST_TEMPLATES };

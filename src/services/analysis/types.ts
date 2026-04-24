@@ -138,7 +138,7 @@ export interface BaseAgent {
 
 // ========== LLM 配置 ==========
 
-export type LLMProvider = 'openai' | 'anthropic' | 'deepseek' | 'mock';
+export type LLMProvider = 'minimax' | 'openai' | 'anthropic' | 'deepseek' | 'mock';
 
 export interface LLMConfig {
   provider: LLMProvider;
