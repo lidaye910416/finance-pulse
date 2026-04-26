@@ -91,3 +91,19 @@
 - Output includes seven_dimensions nested dict with scores for each dimension
 - margin_of_safety calculation: (intrinsic_value - current_price) / intrinsic_value
 - get_seven_dimensions() helper method returns the 7 dimension labels
+
+## 2026-04-26 11:00 - US-006
+- Created server/agents/risk_manager.py with comprehensive risk management
+- Implemented volatility calculation functions:
+  - calculate_volatility_metrics(prices, lookback_days=60): daily_volatility, annualized_volatility, volatility_percentile
+  - calculate_volatility_adjusted_limit(annualized_volatility): position limit % based on volatility
+  - calculate_correlation_multiplier(avg_correlation): correlation adjustment
+- Implemented run_risk_management(state, llm_service): main risk analysis function
+- Implemented analyze_portfolio_risk(state, llm_service): LLM-based risk insights
+- Reference: ai-hedge-fund/src/agents/risk_manager.py has similar implementation
+
+**Learnings:**
+- Volatility calculation: use np.diff(closes) / closes[:-1] for returns
+- Annualized volatility = daily_vol * sqrt(252)
+- Position limit mapping: low_vol(<15%) -> 25%, med_vol(15-30%) -> 12.5-20%, high_vol(30-50%) -> 5-15%, very_high(>50%) -> 10%
+- Correlation multiplier: high corr (>=0.8) -> 0.7x, neutral (0.4-0.6) -> 1.0x, low corr (<0.2) -> 1.10x
