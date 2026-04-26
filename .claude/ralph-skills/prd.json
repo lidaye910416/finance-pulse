@@ -94,7 +94,7 @@
         "Typecheck passes"
       ],
       "priority": 3,
-      "passes": false,
+      "passes": true,
       "notes": "修改 src/pages/News.tsx"
     },
     {
@@ -107,7 +107,7 @@
         "Typecheck passes"
       ],
       "priority": 4,
-      "passes": false,
+      "passes": true,
       "notes": "验证完成后更新 progress.txt"
     }
   ]

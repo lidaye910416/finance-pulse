@@ -14,6 +14,9 @@ Branch: ralph/multi-agent-stock-analysis
 - 前端 API_BASE_URL: localhost:5000 (src/services/api/*.ts)
 - 宏观数据前端: macroData.ts 调用后端 /api/macro 聚合接口
 - 后端宏观数据字段: gdp.current, cpi.yoy/mom, pmi.manufacturing, lpr.oneYear/fiveYear
+- 新闻API: 后端 /api/news 支持 category 参数，返回分类新闻
+- 新闻分类: us-stock/a-stock/commodity/crypto/tech
+- 新闻影响: positive/negative/neutral (基于标题关键词判断)
 
 Completed User Stories (US-026 to US-031):
 --------------------------------------------------------------------------------
@@ -297,6 +300,45 @@ Quality checks:
   - 套利数据为跨平台聚合数据，需要多个平台API
 
 **Note:** Please manually verify PRD - US-042 passes should be true
+
+---
+
+================================================================================
+US-043: 更新 News 页面真实数据
+================================================================================
+Date: 2026-04-26
+
+What was implemented:
+- 添加后端 API: GET /api/news 获取市场新闻
+- 后端从东方财富快讯API获取数据
+- 自动分类新闻 (us-stock/a-stock/commodity/crypto/tech)
+- 根据标题关键词自动判断影响 (positive/negative/neutral)
+- 创建前端 API 服务: src/services/api/newsData.ts
+- 更新 News.tsx 使用 useState/useEffect 加载数据
+- 支持分类切换和加载状态显示
+- FALLBACK_NEWS 数据确保后端不可用时正常显示
+
+Files changed:
+- server/main.py (+195 lines)
+- src/services/api/newsData.ts (+130 lines)
+- src/pages/News.tsx (+50/-80 lines)
+- .claude/ralph-skills/prd.json (US-043 passes=true)
+
+Quality checks:
+- Python syntax check: PASSED ✓
+- TypeScript typecheck: PASSED ✓
+
+**Learnings for future iterations:**
+  - 后端 /api/news API 返回 { items: [{id, category, title, summary, source, time, impact}] }
+  - category 分类: us-stock/a-stock/commodity/crypto/tech
+  - impact 影响: positive/negative/neutral
+  - 前端使用 fetchNews(category, limit) 调用后端 API
+  - FALLBACK_NEWS 确保后端不可用时仍能正常显示
+  - 新闻分类按标题关键词自动判断 (如"特斯拉"→us-stock, "黄金"→commodity)
+  - 情感判断按关键词: 涨/突破/利好→positive, 跌/利空→negative
+  - TypeScript typecheck: npx tsc --noEmit --skipLibCheck
+
+**Note:** Please manually verify PRD - US-043 passes should be true
 
 ---
 
