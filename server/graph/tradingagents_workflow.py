@@ -59,31 +59,31 @@ RISK_DEBATE_SYSTEM = """你是一位专业风险辩论分析师，擅长从不�
 
 # ==================== Stage 1: Market Analyst ====================
 
-async def stage1_market_analyst(state: AgentState, llm_service: LLMService) -> AgentState:
+async def stage1_market_analyst(state: AgentState, llm_service: LLMService = None) -> AgentState:
     """Stage 1: Market Analyst - Market overview and trend analysis"""
     print(f"[TA-Stage1] 市场分析师: 分析 {state.get('code', '')} 的市场背景...")
-    
+
     state = await run_market_analyst(state, llm_service)
-    
+
     print(f"[TA-Stage1] 市场分析完成: {state.get('market_signal', {}).get('sector_trend', 'unknown')}")
     return state
 
 
 # ==================== Stage 2: Social Analyst ====================
 
-async def stage2_social_analyst(state: AgentState, llm_service: LLMService) -> AgentState:
+async def stage2_social_analyst(state: AgentState, llm_service: LLMService = None) -> AgentState:
     """Stage 2: Social Analyst - Social media sentiment"""
     print(f"[TA-Stage2] 社交分析师: 分析 {state.get('code', '')} 的市场情绪...")
-    
+
     state = await run_social_analyst(state, llm_service)
-    
+
     print(f"[TA-Stage2] 社交分析完成: {state.get('social_signal', {}).get('sentiment', 'unknown')}")
     return state
 
 
 # ==================== Stage 3: News Analyst ====================
 
-async def stage3_news_analyst(state: AgentState, llm_service: LLMService) -> AgentState:
+async def stage3_news_analyst(state: AgentState, llm_service: LLMService = None) -> AgentState:
     """Stage 3: News Analyst - News event analysis"""
     print(f"[TA-Stage3] 新闻分析师: 分析 {state.get('code', '')} 的新闻事件...")
 
@@ -95,7 +95,7 @@ async def stage3_news_analyst(state: AgentState, llm_service: LLMService) -> Age
 
 # ==================== Stage 4: Fundamentals Analyst ====================
 
-async def stage4_fundamentals(state: AgentState, llm_service: LLMService) -> AgentState:
+async def stage4_fundamentals(state: AgentState, llm_service: LLMService = None) -> AgentState:
     """Stage 4: Fundamentals Analyst - Financial data analysis"""
     print(f"[TA-Stage4] 基本面分析师: 分析 {state.get('code', '')} 的财务数据...")
     
@@ -132,7 +132,7 @@ async def stage4_fundamentals(state: AgentState, llm_service: LLMService) -> Age
 - 价格: ¥{price:.2f}
 - 市盈率(PE): {pe}
 - 市净率(PB): {pb}
-- 总市值: ¥{market_cap/1e8:.2f}亿
+- 总市值: ¥{(market_cap or 0)/1e8:.2f}亿
 
 请分析：
 1. 估值水平（是否低估/合理/高估）
@@ -232,7 +232,7 @@ def _build_bear_prompt(state: AgentState, iteration: int, bear_history: str, bul
 }}"""
 
 
-async def stage5_bull_bear_debate(state: AgentState, llm_service: LLMService) -> AgentState:
+async def stage5_bull_bear_debate(state: AgentState, llm_service: LLMService = None) -> AgentState:
     """Stage 5: Bull/Bear Debate - Multi-round debate with convergence"""
     print(f"[TA-Stage5] 多空辩论: 开始辩论 for {state.get('code', '')}...")
     
@@ -354,7 +354,7 @@ async def stage5_bull_bear_debate(state: AgentState, llm_service: LLMService) ->
 
 # ==================== Stage 6: Trader Proposal ====================
 
-async def stage6_trader_proposal(state: AgentState, llm_service: LLMService) -> AgentState:
+async def stage6_trader_proposal(state: AgentState, llm_service: LLMService = None) -> AgentState:
     """Stage 6: Trader Proposal - Trading proposal generation"""
     print(f"[TA-Stage6] 交易员提案: 生成交易计划 for {state.get('code', '')}...")
     
@@ -420,7 +420,7 @@ def _build_risk_debate_prompt(state: AgentState) -> str:
 }}"""
 
 
-async def stage7_risk_debate(state: AgentState, llm_service: LLMService) -> AgentState:
+async def stage7_risk_debate(state: AgentState, llm_service: LLMService = None) -> AgentState:
     """Stage 7: Risk Debate - Three risk preference debate"""
     print(f"[TA-Stage7] 风险辩论: 评估风险 for {state.get('code', '')}...")
     
@@ -474,7 +474,7 @@ async def stage7_risk_debate(state: AgentState, llm_service: LLMService) -> Agen
 
 # ==================== Stage 8: Portfolio Manager ====================
 
-async def stage8_portfolio_manager(state: AgentState, llm_service: LLMService) -> AgentState:
+async def stage8_portfolio_manager(state: AgentState, llm_service: LLMService = None) -> AgentState:
     """Stage 8: Portfolio Manager - Final investment decision"""
     print(f"[TA-Stage8] 投资组合经理: 最终决策 for {state.get('code', '')}...")
     
@@ -498,15 +498,20 @@ def create_tradingagents_workflow(llm_service: LLMService) -> StateGraph:
     """
     workflow = StateGraph(AgentState)
     
-    # 添加8个阶段节点
-    workflow.add_node("stage1_market", lambda state: stage1_market_analyst(state, llm_service))
-    workflow.add_node("stage2_social", lambda state: stage2_social_analyst(state, llm_service))
-    workflow.add_node("stage3_news", lambda state: stage3_news_analyst(state, llm_service))
-    workflow.add_node("stage4_fundamentals", lambda state: stage4_fundamentals(state, llm_service))
-    workflow.add_node("stage5_debate", lambda state: stage5_bull_bear_debate(state, llm_service))
-    workflow.add_node("stage6_trader", lambda state: stage6_trader_proposal(state, llm_service))
-    workflow.add_node("stage7_risk", lambda state: stage7_risk_debate(state, llm_service))
-    workflow.add_node("stage8_portfolio", lambda state: stage8_portfolio_manager(state, llm_service))
+    # 添加8个阶段节点 - 使用闭包捕获 llm_service
+    def make_node(fn):
+        async def wrapper(state):
+            return await fn(state, llm_service)
+        return wrapper
+
+    workflow.add_node("stage1_market", make_node(stage1_market_analyst))
+    workflow.add_node("stage2_social", make_node(stage2_social_analyst))
+    workflow.add_node("stage3_news", make_node(stage3_news_analyst))
+    workflow.add_node("stage4_fundamentals", make_node(stage4_fundamentals))
+    workflow.add_node("stage5_debate", make_node(stage5_bull_bear_debate))
+    workflow.add_node("stage6_trader", make_node(stage6_trader_proposal))
+    workflow.add_node("stage7_risk", make_node(stage7_risk_debate))
+    workflow.add_node("stage8_portfolio", make_node(stage8_portfolio_manager))
     
     # 设置入口点
     workflow.set_entry_point("stage1_market")

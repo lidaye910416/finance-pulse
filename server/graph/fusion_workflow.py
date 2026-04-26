@@ -208,11 +208,11 @@ def _build_leader_prompt(state: AgentState, leader: dict) -> str:
     bullish_count = len([s for s in signals if s.get("signal") == "bullish"])
     bearish_count = len([s for s in signals if s.get("signal") == "bearish"])
 
-    return f"""作为{leader.name}，请做出最终投资决策。
+    return f"""作为{leader.get('name', 'Unknown')}，请做出最终投资决策。
 
 【你的背景】
-{leader.description}
-投资风格: {leader.style}
+{leader.get('description', '')}
+投资风格: {leader.get('style', '')}
 
 股票：{state.get('name', '')}（{state.get('code', '')}）
 当前价格：¥{stock_data.get('price', 0):.2f}
@@ -248,7 +248,7 @@ def _build_leader_prompt(state: AgentState, leader: dict) -> str:
 }}"""
 
 
-async def _run_layer1_collect(state: AgentState, llm_service: LLMService) -> AgentState:
+async def _run_layer1_collect(state: AgentState, llm_service: LLMService = None) -> AgentState:
     """Layer 1: Data Collection"""
     from services.data import DataService
 
@@ -268,7 +268,7 @@ async def _run_layer1_collect(state: AgentState, llm_service: LLMService) -> Age
     return state
 
 
-async def _run_layer2_analysts(state: AgentState, llm_service: LLMService) -> AgentState:
+async def _run_layer2_analysts(state: AgentState, llm_service: LLMService = None) -> AgentState:
     """Layer 2: 5 Fixed Analysts"""
     import asyncio
 
@@ -332,7 +332,7 @@ async def _run_layer2_analysts(state: AgentState, llm_service: LLMService) -> Ag
     return state
 
 
-async def _run_layer3_debate(state: AgentState, llm_service: LLMService) -> AgentState:
+async def _run_layer3_debate(state: AgentState, llm_service: LLMService = None) -> AgentState:
     """Layer 3: Bull/Bear Debate with Convergence"""
     import asyncio
 
@@ -446,7 +446,7 @@ def _should_continue_debate(state: AgentState) -> Literal["debate", "synthesize"
     return "debate"
 
 
-async def _run_layer4_risk(state: AgentState, llm_service: LLMService) -> AgentState:
+async def _run_layer4_risk(state: AgentState, llm_service: LLMService = None) -> AgentState:
     """Layer 4: Simplified Risk Agent"""
     print(f"[fusion] Layer 4: 简化风险评估...")
 
@@ -491,7 +491,7 @@ async def _run_layer4_risk(state: AgentState, llm_service: LLMService) -> AgentS
     return state
 
 
-async def _run_layer5_decision(state: AgentState, llm_service: LLMService) -> AgentState:
+async def _run_layer5_decision(state: AgentState, llm_service: LLMService = None) -> AgentState:
     """Layer 5: Leader Decision (decision only)"""
     leader_id = state.get("leader_id")
     leader = LEADERS_BY_ID.get(leader_id, {})
@@ -556,7 +556,7 @@ async def _run_layer5_decision(state: AgentState, llm_service: LLMService) -> Ag
     return state
 
 
-async def _synthesize(state: AgentState, llm_service: LLMService) -> AgentState:
+async def _synthesize(state: AgentState, llm_service: LLMService = None) -> AgentState:
     """Synthesize debate results"""
     signals = state.get("analyst_signals", [])
     bullish_signal = state.get("bullish_signal", {})
@@ -589,28 +589,24 @@ def create_fusion_workflow(llm_service: LLMService) -> StateGraph:
     """
     workflow = StateGraph(AgentState)
 
-    # 添加节点
-    workflow.add_node("collect_data", lambda state: _run_layer1_collect(state, llm_service))
-    workflow.add_node("run_analysts", lambda state: _run_layer2_analysts(state, llm_service))
-    workflow.add_node("debate", lambda state: _run_layer3_debate(state, llm_service))
-    workflow.add_node("synthesize", lambda state: _synthesize(state, llm_service))
-    workflow.add_node("evaluate_risk", lambda state: _run_layer4_risk(state, llm_service))
-    workflow.add_node("leader_decision", lambda state: _run_layer5_decision(state, llm_service))
+    # 添加节点 - 使用闭包捕获 llm_service
+    def make_node(fn):
+        async def wrapper(state):
+            return await fn(state, llm_service)
+        return wrapper
+
+    workflow.add_node("collect_data", make_node(_run_layer1_collect))
+    workflow.add_node("run_analysts", make_node(_run_layer2_analysts))
+    workflow.add_node("debate", make_node(_run_layer3_debate))
+    workflow.add_node("synthesize", make_node(_synthesize))
+    workflow.add_node("evaluate_risk", make_node(_run_layer4_risk))
+    workflow.add_node("leader_decision", make_node(_run_layer5_decision))
 
     # 设置入口和边
     workflow.set_entry_point("collect_data")
     workflow.add_edge("collect_data", "run_analysts")
     workflow.add_edge("run_analysts", "debate")
-
-    # 辩论循环条件边
-    workflow.add_conditional_edges(
-        "debate",
-        _should_continue_debate,
-        {
-            "debate": "debate",
-            "synthesize": "evaluate_risk",
-        }
-    )
+    workflow.add_edge("debate", "evaluate_risk")
 
     workflow.add_edge("evaluate_risk", "leader_decision")
     workflow.add_edge("leader_decision", END)

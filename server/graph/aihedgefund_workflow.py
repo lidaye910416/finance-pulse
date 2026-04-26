@@ -204,7 +204,7 @@ def _build_leader_decision_prompt(state: AgentState, leader: dict) -> str:
 }}"""
 
 
-async def _run_layer1_collect(state: AgentState, llm_service: LLMService) -> AgentState:
+async def _run_layer1_collect(state: AgentState, llm_service: LLMService = None) -> AgentState:
     """Layer 1: Data Collection"""
     from services.data import DataService
 
@@ -224,7 +224,7 @@ async def _run_layer1_collect(state: AgentState, llm_service: LLMService) -> Age
     return state
 
 
-async def _run_layer2_analysts(state: AgentState, llm_service: LLMService) -> AgentState:
+async def _run_layer2_analysts(state: AgentState, llm_service: LLMService = None) -> AgentState:
     """Layer 2: Dynamic Analyst Selection based on leader style"""
     import asyncio
 
@@ -300,7 +300,7 @@ async def _run_layer2_analysts(state: AgentState, llm_service: LLMService) -> Ag
     return state
 
 
-async def _run_layer3_risk(state: AgentState, llm_service: LLMService) -> AgentState:
+async def _run_layer3_risk(state: AgentState, llm_service: LLMService = None) -> AgentState:
     """Layer 3: Risk Agent Evaluation (full version)"""
     leader_id = state.get("leader_id")
     leader = LEADERS_BY_ID.get(leader_id, {})
@@ -351,7 +351,7 @@ async def _run_layer3_risk(state: AgentState, llm_service: LLMService) -> AgentS
     return state
 
 
-async def _run_layer4_decision(state: AgentState, llm_service: LLMService) -> AgentState:
+async def _run_layer4_decision(state: AgentState, llm_service: LLMService = None) -> AgentState:
     """Layer 4: Leader Decision with Full Intervention"""
     leader_id = state.get("leader_id")
     leader = LEADERS_BY_ID.get(leader_id, {})
@@ -436,11 +436,16 @@ def create_aihedgefund_workflow(llm_service: LLMService) -> StateGraph:
     """
     workflow = StateGraph(AgentState)
 
-    # 添加节点
-    workflow.add_node("collect_data", lambda state: _run_layer1_collect(state, llm_service))
-    workflow.add_node("run_analysts", lambda state: _run_layer2_analysts(state, llm_service))
-    workflow.add_node("evaluate_risk", lambda state: _run_layer3_risk(state, llm_service))
-    workflow.add_node("leader_decision", lambda state: _run_layer4_decision(state, llm_service))
+    # 添加节点 - 使用闭包捕获 llm_service
+    def make_node(fn):
+        async def wrapper(state):
+            return await fn(state, llm_service)
+        return wrapper
+
+    workflow.add_node("collect_data", make_node(_run_layer1_collect))
+    workflow.add_node("run_analysts", make_node(_run_layer2_analysts))
+    workflow.add_node("evaluate_risk", make_node(_run_layer3_risk))
+    workflow.add_node("leader_decision", make_node(_run_layer4_decision))
 
     # 设置入口和边
     workflow.set_entry_point("collect_data")

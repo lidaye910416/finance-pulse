@@ -63,16 +63,14 @@ async function fetchMarginBalance(): Promise<number | null> {
   return null;  // API 失败返回 null
 }
 
-// 获取快讯（API失败返回空数组）
+// 获取快讯（通过后端API获取）
 async function fetchFastNews(): Promise<NewsItem[]> {
   try {
-    // 东方财富快讯API
-    const url = `https://np-listapi.eastmoney.com/comm/web/getFastNewsList?cb=jQuery&client=web&page=1&pageSize=20&endTime=&keyword=&order=1`;
-    const response = await fetch(url);
+    const response = await fetch(`${API_BASE_URL}/api/news?limit=10`);
     if (!response.ok) return [];
 
     const data = await response.json();
-    return data.list || [];
+    return data.items || [];
   } catch (error) {
     console.error('获取快讯失败:', error);
     return [];  // API 失败返回空数组

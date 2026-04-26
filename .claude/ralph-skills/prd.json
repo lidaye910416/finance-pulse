@@ -1,114 +1,99 @@
 {
-  "project": "FinancePulse",
+  "project": "FinancePulse Multi-Agent Algorithm Alignment",
   "branchName": "ralph/multi-agent-stock-analysis",
-  "description": "清除前端硬编码数据，实现真实API调用",
+  "description": "将我们的模拟算法与参考库(TradingAgents, ai-hedge-fund)对齐",
   "userStories": [
     {
-      "id": "US-037",
-      "title": "实现后端宏观数据API",
-      "description": "实现GDP/CPI/PMI/LPR等宏观数据API",
+      "id": "US-050",
+      "title": "修复 workflow async node 问题",
+      "description": "修复 LangGraph async node 无法正确传递 llm_service 的问题",
       "acceptanceCriteria": [
-        "实现 GET /api/macro/gdp 返回GDP增速",
-        "实现 GET /api/macro/cpi 返回CPI数据",
-        "实现 GET /api/macro/PMI 返回PMI数据",
-        "实现 GET /api/macro/lpr 返回LPR数据",
-        "使用东方财富或国家统计局数据源",
+        "tradingagents_workflow.py 节点使用闭包捕获 llm_service",
+        "fusion_workflow.py 节点使用闭包捕获 llm_service",
+        "aihedgefund_workflow.py 节点使用闭包捕获 llm_service",
+        "analyze API 调用 ainvoke 而非 invoke",
         "Python 语法检查通过"
       ],
       "priority": 1,
-      "passes": true,
-      "notes": "后端 server/main.py 或新建 api/macro.py"
+      "passes": false,
+      "notes": "参考 /Users/jasonlee/FinancePulse_reference/TradingAgents/tradingagents/graph/trading_graph.py"
     },
     {
-      "id": "US-038",
-      "title": "实现后端汇率API",
-      "description": "实现人民币汇率API",
+      "id": "US-051",
+      "title": "添加量化财务分析函数",
+      "description": "添加 ai-hedge-fund 风格的量化分析函数",
       "acceptanceCriteria": [
-        "实现 GET /api/macro/exchange-rate 返回汇率数据",
-        "支持 USD/CNY, EUR/CNY, JPY/CNY 等",
+        "实现 analyze_fundamentals (ROE, debt, margins, current ratio)",
+        "实现 analyze_consistency (盈利一致性分析)",
+        "实现 analyze_moat (护城河分析)",
+        "实现 calculate_intrinsic_value (DCF 内在价值)",
+        "实现 analyze_pricing_power (定价权分析)",
+        "实现 calculate_margin_of_safety (安全边际)",
         "Python 语法检查通过"
       ],
-      "priority": 1,
-      "passes": true,
-      "notes": "使用东方财富汇率接口"
+      "priority": 2,
+      "passes": false,
+      "notes": "参考 /Users/jasonlee/FinancePulse_reference/ai-hedge-fund/src/agents/warren_buffett.py"
     },
     {
-      "id": "US-039",
-      "title": "更新前端宏观数据API调用",
-      "description": "DataPage/MacroData 调用后端宏观数据API",
+      "id": "US-052",
+      "title": "添加数据获取工具函数",
+      "description": "添加 get_financial_metrics, get_market_cap 等数据工具",
       "acceptanceCriteria": [
-        "GDP/CPI/PMI/LPR 使用真实API",
-        "移除所有 mockMacroIndicators 等硬编码",
-        "Typecheck passes"
+        "实现 get_financial_metrics (获取财务指标)",
+        "实现 get_market_cap (获取市值)",
+        "实现 search_line_items (获取财务明细)",
+        "实现 get_price_history (获取历史价格)",
+        "与后端 DataService 集成",
+        "Python 语法检查通过"
       ],
       "priority": 2,
-      "passes": true,
-      "notes": "修改 src/pages/DataPage.tsx 和 macroData.ts"
+      "passes": false,
+      "notes": "参考 /Users/jasonlee/FinancePulse_reference/ai-hedge-fund/src/tools/api.py"
     },
     {
-      "id": "US-040",
-      "title": "更新前端汇率数据",
-      "description": "DataPage 汇率使用真实API",
+      "id": "US-053",
+      "title": "实现大师个性化分析",
+      "description": "为每个投资大师实现个性化分析逻辑",
       "acceptanceCriteria": [
-        "USD/CNY 等汇率使用真实API",
-        "移除所有硬编码汇率",
-        "Typecheck passes"
-      ],
-      "priority": 2,
-      "passes": true,
-      "notes": "修改 DataPage.tsx 汇率部分"
-    },
-    {
-      "id": "US-041",
-      "title": "更新 HomePage 真实数据",
-      "description": "HomePage 使用真实API替代硬编码",
-      "acceptanceCriteria": [
-        "快捷操作使用真实数据",
-        "移除 mockNews, hotStocks 等硬编码",
-        "Typecheck passes"
+        "WarrenBuffett: 基于价值投资的内在价值分析",
+        "PeterLynch: 成长股分析，关注营收增速",
+        "StanleyDruckenmiller: 宏观分析，关注趋势",
+        "每个大师有独立的 system prompt",
+        "Python 语法检查通过"
       ],
       "priority": 3,
-      "passes": true,
-      "notes": "修改 src/pages/HomePage.tsx"
+      "passes": false,
+      "notes": "参考 ai-hedge-fund/src/agents/ 目录"
     },
     {
-      "id": "US-042",
-      "title": "更新 PredictionMarket 真实数据",
-      "description": "PredictionMarket 使用真实API",
+      "id": "US-054",
+      "title": "添加 Memory 组件",
+      "description": "添加 FinancialSituationMemory 用于辩论时的信息积累",
       "acceptanceCriteria": [
-        "移除 polymarketEvents 硬编码",
-        "使用真实预测市场API",
-        "Typecheck passes"
+        "实现 bull_memory (多头分析师记忆)",
+        "实现 bear_memory (空头分析师记忆)",
+        "支持 debate 过程中的信息积累",
+        "Python 语法检查通过"
       ],
       "priority": 3,
-      "passes": true,
-      "notes": "修改 src/pages/PredictionMarket.tsx"
+      "passes": false,
+      "notes": "参考 TradingAgents/agents/utils/memory.py"
     },
     {
-      "id": "US-043",
-      "title": "更新 News 页面",
-      "description": "News 页面使用真实新闻API",
+      "id": "US-055",
+      "title": "验证完整分析流程",
+      "description": "验证三种模式(tradingagents/aihedgefund/fusion)都能正常运行",
       "acceptanceCriteria": [
-        "移除 allNews 硬编码",
-        "使用真实新闻API",
-        "Typecheck passes"
-      ],
-      "priority": 3,
-      "passes": true,
-      "notes": "修改 src/pages/News.tsx"
-    },
-    {
-      "id": "US-044",
-      "title": "验证无硬编码数据",
-      "description": "扫描所有页面确认无硬编码",
-      "acceptanceCriteria": [
-        "扫描 src/pages/*.tsx 无 mock 数据",
-        "扫描 src/services/api/*.ts 无硬编码",
-        "Typecheck passes"
+        "tradingagents 模式返回分析结果",
+        "aihedgefund 模式返回分析结果",
+        "fusion 模式返回分析结果",
+        "信号和推荐格式正确",
+        "Python 语法检查通过"
       ],
       "priority": 4,
-      "passes": true,
-      "notes": "验证完成后更新 progress.txt"
+      "passes": false,
+      "notes": "测试 POST /analyze 接口"
     }
   ]
 }

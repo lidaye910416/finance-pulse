@@ -387,7 +387,7 @@ async def analyze_stock(request: AnalysisRequest):
         print(f"[analyze] 使用 {mode} 工作流分析 {request.code}...")
 
         workflow = get_workflow(mode, llm_service)
-        result = workflow.invoke(initial_state)
+        result = await workflow.ainvoke(initial_state)
 
         duration_ms = int((datetime.now() - start_time).total_seconds() * 1000)
 

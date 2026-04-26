@@ -20,14 +20,15 @@ load_dotenv()
 
 class LLMService:
     """LLM 服务类"""
-    
+
     def __init__(self):
         self.provider = os.getenv("LLM_PROVIDER", "minimax")
-        self.api_key = os.getenv("LLM_API_KEY", "")
+        # 优先使用 LLM_API_KEY，如果没有则使用 MINIMAX_API_KEY
+        self.api_key = os.getenv("LLM_API_KEY") or os.getenv("MINIMAX_API_KEY", "")
         self.model = os.getenv("LLM_MODEL", "MiniMax-M2.7-0508")
-        self.base_url = os.getenv("LLM_BASE_URL", "https://api.minimaxi.com/anthropic")
-        
-        print(f"[LLMService] 初始化完成: provider={self.provider}, model={self.model}")
+        self.base_url = os.getenv("LLM_BASE_URL") or os.getenv("ANTHROPIC_BASE_URL", "https://api.minimaxi.com/anthropic")
+
+        print(f"[LLMService] 初始化完成: provider={self.provider}, model={self.model}, base_url={self.base_url}")
     
     def is_configured(self) -> bool:
         """检查是否已配置"""
@@ -109,9 +110,20 @@ class LLMService:
                 raise Exception(f"API 错误: {response.status_code} - {response.text}")
             
             data = response.json()
-            
+
+            # Extract text from content (handle both thinking and text types)
+            text_content = ""
+            if data.get("content"):
+                for item in data["content"]:
+                    if item.get("type") == "text":
+                        text_content = item.get("text", "")
+                        break
+                    elif item.get("type") == "thinking":
+                        # Skip thinking content for now
+                        continue
+
             return {
-                "content": data["content"][0]["text"] if data.get("content") else "",
+                "content": text_content,
                 "model": data.get("model", self.model),
                 "tokens": data.get("usage", {}).get("input_tokens", 0) + data.get("usage", {}).get("output_tokens", 0),
             }
