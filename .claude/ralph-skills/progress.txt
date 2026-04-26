@@ -140,3 +140,26 @@
 - Pattern: AnalysisState type ('idle'|'analyzing'|'completed'|'error') for UI state management
 - Gotcha: apiService.getLeaders() requires backend to be running, add fallback in component
 - Gotcha: When calling analyzeStock, convert preset strings to numeric params using getConvergencePresets()
+
+
+## 2026-04-26 16:00 - US-014
+- Created comprehensive DataService with all required methods
+- Implemented get_stock_data(code): 获取实时行情
+- Implemented get_financial_metrics(code, period, limit): 获取财务指标 (ROE, ROA, margins, etc.)
+- Implemented search_line_items(code, items, limit): 获取财务明细
+- Implemented get_market_cap(code, date): 获取市值
+- Implemented get_price_history(code, days): 获取历史价格
+- Added AKShare integration with akshare library
+- Added mock data fallback when API fails
+- Added global singleton get_data_service() function
+
+**Files changed:**
+- server/services/data.py (完整重写)
+
+**Learnings for future iterations:**
+- Pattern: Use `USE_MOCK_DATA` env var to enable mock data for testing
+- Pattern: Each method has `_fetch_*_akshare` for real data and `_get_mock_*` for fallback
+- Gotcha: AKShare functions like `stock_zh_a_hist` use code without sh/sz prefix
+- Gotcha: Use `_safe_float()` helper to handle None/NaN values from pandas
+- Pattern: Mock data for specific stocks (600519, 000858, 300750) provides realistic base values
+- Reference: ai-hedge-fund/src/tools/api.py uses similar pattern with cache + API fallback
