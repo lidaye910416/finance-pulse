@@ -309,3 +309,17 @@
 - US-024: Leader style mapping ✓
 
 🎉 All 11 user stories completed!
+
+## 2026-04-26 19:00 - US-029
+- Added getLeaders() fallback in apiService.ts
+- When backend /api/leaders returns 404 or network error, returns local fallback list of 19 investment masters
+- TypeScript typecheck passes
+
+**Files changed:**
+- src/services/api/apiService.ts
+
+**Learnings:**
+- Pattern: Use try-catch in API service methods to handle backend unavailability gracefully
+- Pattern: Return fallback data from the service layer instead of letting errors propagate
+---
+
