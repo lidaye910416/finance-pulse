@@ -11,7 +11,7 @@ Pattern:
 
 import json
 from abc import ABC, abstractmethod
-from typing import Any
+from typing import Any, Optional
 
 from graph.state import AgentState
 from services.llm import LLMService
@@ -166,7 +166,7 @@ def get_available_leaders() -> list[dict]:
     return LEADERS
 
 
-def get_leader_config(leader_id: str) -> dict | None:
+def get_leader_config(leader_id: str) -> Optional[dict]:
     """根据 ID 获取 Leader 配置"""
     return next((l for l in LEADERS if l["id"] == leader_id), None)
 
@@ -783,7 +783,7 @@ class NassimTalebLeader(LeaderBase):
 
 # ========== Leader 工厂函数 ==========
 
-def create_leader(leader_id: str) -> LeaderBase | None:
+def create_leader(leader_id: str) -> Optional[LeaderBase]:
     """创建 Leader 实例
     
     根据 leader_id 创建对应的 Leader 子类实例。

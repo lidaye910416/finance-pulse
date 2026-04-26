@@ -4,7 +4,7 @@ LangGraph 状态定义
 定义多智能体工作流中的共享状态
 """
 
-from typing import TypedDict, Literal
+from typing import TypedDict, Literal, Optional
 from pydantic import BaseModel
 
 
@@ -21,10 +21,10 @@ class Recommendation(BaseModel):
     """投资建议"""
     action: Literal["buy", "hold", "sell", "watch"]
     confidence: int
-    entry_price: float | None = None
-    exit_price: float | None = None
-    stop_loss: float | None = None
-    position_size: float | None = None
+    entry_price: Optional[float] = None
+    exit_price: Optional[float] = None
+    stop_loss: Optional[float] = None
+    position_size: Optional[float] = None
     timeframe: str
     risks: list[str]
 
@@ -41,33 +41,40 @@ class DebateResult(BaseModel):
 class AgentState(TypedDict):
     """
     LangGraph 工作流状态
-    
+
     在各个节点间传递，包含完整的分析上下文
     """
     # 股票信息
     code: str
     name: str
     stock_data: dict
-    
+
     # 迭代控制
     iteration: int
     max_iterations: int
-    
+
     # 分析结果
     analyst_signals: list[dict]  # 各分析师的信号
-    bullish_signal: dict | None  # 多头研究员信号
-    bearish_signal: dict | None  # 空头研究员信号
-    
+    bullish_signal: Optional[dict]  # 多头研究员信号
+    bearish_signal: Optional[dict]  # 空头研究员信号
+
     # 辩论历史
     debate_history: list[dict]
-    
+
     # 最终输出
     final_summary: str
-    recommendation: dict | None
+    recommendation: Optional[dict]
     total_tokens: int
-    
+
     # 错误处理
-    error: str | None
+    error: Optional[str]
+
+    # 新增参数 (支持不同工作流模式)
+    mode: str  # 'tradingagents' | 'aihedgefund' | 'fusion'
+    leader_id: Optional[str]
+    risk_level: Optional[str]  # 'conservative' | 'moderate' | 'aggressive'
+    convergence_gap: Optional[float]
+    early_stop_gap: Optional[float]
 
 
 def should_continue(state: AgentState) -> Literal["debate", "synthesize"]:
