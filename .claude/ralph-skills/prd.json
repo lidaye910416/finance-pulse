@@ -1,0 +1,142 @@
+{
+  "project": "FinancePulse",
+  "branchName": "ralph/multi-agent-stock-analysis",
+  "description": "多智能体股票分析系统 - 基于TradingAgents和ai-hedge-fund的三种分析模式",
+  "userStories": [
+    {
+      "id": "US-001",
+      "title": "实现 News Analyst 分析师",
+      "description": "创建新闻分析师节点",
+      "acceptanceCriteria": [
+        "创建 agents/tradingagents/researchers/news.py",
+        "集成到 tradingagents_workflow.py 第3阶段",
+        "Typecheck passes"
+      ],
+      "priority": 1,
+      "passes": true,
+      "notes": "已完成"
+    },
+    {
+      "id": "US-002",
+      "title": "实现 Fundamentals Analyst",
+      "description": "创建基本面分析师",
+      "acceptanceCriteria": [
+        "创建 agents/tradingagents/researchers/fundamentals.py",
+        "集成到 tradingagents_workflow.py 第4阶段",
+        "Typecheck passes"
+      ],
+      "priority": 2,
+      "passes": true,
+      "notes": "已完成"
+    },
+    {
+      "id": "US-003",
+      "title": "实现 Risk Debate 节点",
+      "description": "实现风险辩论节点，从三种风险偏好角度评估投资",
+      "acceptanceCriteria": [
+        "创建 agents/tradingagents/risk_debate.py",
+        "支持三种风险视角：conservative/moderate/aggressive",
+        "输出风险辩论历史和最终建议",
+        "集成到 tradingagents_workflow.py 第7阶段",
+        "Typecheck passes"
+      ],
+      "priority": 3,
+      "passes": true,
+      "notes": "已完成 risk_debate.py，包含保守型/适度型/激进型三种风险视角"
+    },
+    {
+      "id": "US-004",
+      "title": "实现 Leader 基类和工厂函数",
+      "description": "创建 Leader 抽象基类",
+      "acceptanceCriteria": [
+        "创建 agents/leaders/base.py",
+        "定义 LeaderBase 抽象类",
+        "实现 create_leader(leader_id) 工厂函数",
+        "Typecheck passes"
+      ],
+      "priority": 4,
+      "passes": true,
+      "notes": "已完成 - 创建了包含6位大师的Leader体系（Warren Buffett, Ben Graham, Peter Lynch, Charlie Munger, Michael Burry, Nassim Taleb）"
+    },
+    {
+      "id": "US-005",
+      "title": "实现 Warren Buffett Leader",
+      "description": "实现巴菲特大师的具体投资逻辑",
+      "acceptanceCriteria": [
+        "创建 agents/leaders/warren_buffett.py",
+        "实现7维度分析",
+        "计算安全边际",
+        "Typecheck passes"
+      ],
+      "priority": 5,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-006",
+      "title": "实现 Risk Manager 完整版",
+      "description": "基于波动率实现风险管理agent",
+      "acceptanceCriteria": [
+        "创建 agents/risk_manager.py",
+        "实现波动率计算函数",
+        "输出每个ticker的剩余仓位限制",
+        "Typecheck passes"
+      ],
+      "priority": 6,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-007",
+      "title": "更新 AI Hedge Fund 工作流",
+      "description": "更新aihedgefund_workflow.py",
+      "acceptanceCriteria": [
+        "支持 selected_analysts 参数",
+        "所有分析师并行运行",
+        "Typecheck passes"
+      ],
+      "priority": 7,
+      "passes": true,
+      "notes": "已完成"
+    },
+    {
+      "id": "US-008",
+      "title": "创建前端 AnalysisParams 组件",
+      "description": "实现参数设置面板",
+      "acceptanceCriteria": [
+        "创建 src/components/analysis/AnalysisParams.tsx",
+        "支持三种模式切换",
+        "Typecheck passes"
+      ],
+      "priority": 8,
+      "passes": true,
+      "notes": "已完成"
+    },
+    {
+      "id": "US-009",
+      "title": "创建 SignalPanel 组件",
+      "description": "实现5位分析师信号可视化面板",
+      "acceptanceCriteria": [
+        "创建 src/components/analysis/SignalPanel.tsx",
+        "显示置信度条形图",
+        "Typecheck passes"
+      ],
+      "priority": 9,
+      "passes": true,
+      "notes": "已完成"
+    },
+    {
+      "id": "US-010",
+      "title": "创建 RecommendationCard 组件",
+      "description": "实现投资建议展示卡片",
+      "acceptanceCriteria": [
+        "创建 src/components/analysis/RecommendationCard.tsx",
+        "显示 action/置信度/仓位/止损",
+        "Typecheck passes"
+      ],
+      "priority": 10,
+      "passes": true,
+      "notes": "已完成"
+    }
+  ]
+}

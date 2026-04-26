@@ -1,0 +1,74 @@
+# Ralph Progress Log
+
+## Codebase Patterns
+- FinancePulse 使用 LangGraph 进行工作流编排
+- 股票代码格式：A股如 "600519"，创业板如 "300750"
+- 三种模式：tradingagents(8阶段), aihedgefund(4层), fusion(Leader决策)
+- 参考仓库位于 ~/FinancePulse_reference/TradingAgents/ 和 ai-hedge-fund/
+- 前端组件位于 src/components/analysis/
+- 后端agents位于 server/agents/tradingagents/
+
+---
+
+## 2026-04-26 09:52 - US-001
+- Created news.py analyst in agents/tradingagents/researchers/
+- Created modular run_news_analyst(state, llm_service) function
+- Integrated into tradingagents_workflow.py Stage 3
+
+**Learnings:**
+- Pattern: Each analyst module has run_*_analyst(state, llm_service)
+- Pattern: Output format is JSON with _report (string) and _signal (dict)
+---
+
+## 2026-04-26 (earlier run) - US-008
+- Created AnalysisParams.tsx component
+- Supports mode selection (TradingAgents/AIHedgeFund/Fusion)
+- Supports leader selection from 19 masters
+- Supports convergence parameters (max_iterations, convergence_gap, early_stop_gap)
+- Supports risk level (conservative/moderate/aggressive)
+---
+
+## 2026-04-26 (earlier run) - US-009
+- Created SignalPanel.tsx component
+- Displays 5 analyst signals with confidence bars
+- Shows bull vs bear debate results
+- Shows convergence status
+
+---
+
+## 2026-04-26 (earlier run) - US-010
+- Created RecommendationCard.tsx component
+- Displays action: buy/hold/sell/watch
+- Shows confidence, timeframe, position_size, stop_loss, exit_price
+- Shows risk warnings list
+- Adapts format based on mode
+
+---
+## 2026-04-26 10:30 - US-003
+- Created risk_debate.py with three risk perspectives (conservative/moderate/aggressive)
+- Each perspective has distinct system prompts and risk parameters
+- Integrated into workflow.py as Stage 7 node (between debate and synthesize)
+- Outputs risk_debate_results, risk_debate_history, and risk_recommendation
+
+**Learnings:**
+- Pattern: Debates use _build_*_prompt(state) and _parse_*_response(content) pattern
+- Pattern: Three risk levels map to stop_loss_pct: conservative (5-8%), moderate (10-15%), aggressive (15-25%)
+- Gotcha: Workflow routing goes debate -> (conditional) -> risk_debate -> synthesize -> decision
+- Reference: ai-hedge-fund/src/agents/risk_manager.py has volatility-based position sizing
+---
+
+
+## 2026-04-26 10:35 - US-004
+- Created agents/leaders/base.py with LeaderBase abstract class
+- Implemented 6 investment masters: Warren Buffett, Ben Graham, Peter Lynch, Charlie Munger, Michael Burry, Nassim Taleb
+- Implemented create_leader(leader_id) factory function
+- Implemented run_leader(leader_id, state, llm_service) async function
+- Each leader has _build_prompt(state) and _parse_response(content) methods
+- Each leader has detailed system prompts with investment philosophy
+
+**Learnings:**
+- Pattern: Leaders use config dict with system_prompt embedded
+- Pattern: Each leader implements _build_prompt(state) and _parse_response(content)
+- Pattern: Output format is JSON with decision, confidence, reasoning, key_factors, risk_factors
+- Pattern: Leaders import AgentState from graph.state and LLMService from services.llm
+- Gotcha: Python 3.9 uses `from typing import Optional` instead of `type | None` syntax
