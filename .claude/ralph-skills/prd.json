@@ -16,7 +16,7 @@
         "Python 语法检查通过"
       ],
       "priority": 1,
-      "passes": false,
+      "passes": true,
       "notes": "修改 server/main.py"
     },
     {
@@ -30,7 +30,7 @@
         "Python 语法检查通过"
       ],
       "priority": 1,
-      "passes": false,
+      "passes": true,
       "notes": "修改 server/main.py analyze 端点"
     },
     {
@@ -44,7 +44,7 @@
         "Python 语法检查通过"
       ],
       "priority": 1,
-      "passes": false,
+      "passes": true,
       "notes": "修改 server/main.py，导入 config.leaders"
     },
     {
