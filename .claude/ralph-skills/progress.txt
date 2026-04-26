@@ -214,3 +214,47 @@
 - Gotcha: Strings with Chinese quotes need escaping in Python source files
 - Pattern: Each leader exports create_*_leader() factory and run_*_analysis() convenience function
 - Reference: ai-hedge-fund/src/agents/ben_graham.py has detailed quantitative analysis we can use later
+
+
+## 2026-04-26 17:00 - US-020
+- Created server/agents/analysts/technicals.py with TechnicalAnalyst class
+- Implemented MA5/MA10/MA20/MA60 moving average analysis
+- Implemented MACD (EMA12/EMA26/Signal9) analysis
+- Implemented KDJ (K/D/J with 9-period) analysis
+- Implemented Bollinger Bands (20-period, 2 std dev) analysis
+- Combined signals with weighted ensemble (MA 30%, MACD 25%, KDJ 25%, Bollinger 20%)
+
+**Files changed:**
+- server/agents/analysts/technicals.py (new)
+
+---
+
+## 2026-04-26 17:05 - US-021
+- Created server/agents/analysts/sentiment.py with SentimentAnalyst class
+- Implemented trend sentiment (returns, trend consistency, MA system)
+- Implemented volume sentiment (volume ratio, volume trend, price-volume divergence)
+- Implemented volatility sentiment (volatility percentile, volatility trend)
+- Combined sentiment with weighted scoring (trend 50%, volume 30%, volatility 20%)
+
+**Files changed:**
+- server/agents/analysts/sentiment.py (new)
+
+---
+
+## 2026-04-26 17:10 - US-022
+- Created server/agents/analysts/valuation.py with ValuationAnalyst class
+- Implemented DCF valuation with 5-year projection and terminal value
+- Implemented PE relative valuation (fair range 15-25)
+- Implemented PB relative valuation (fair range 2-5)
+- Implemented PEG valuation (fair range 0.5-2.0)
+- Combined valuations with weighted scoring (DCF 40%, PE 25%, PB 15%, PEG 20%)
+
+**Files changed:**
+- server/agents/analysts/valuation.py (new)
+
+**Learnings for future iterations:**
+- Pattern: Analyst modules follow similar structure with analyze() method and run_*_analyst() function
+- Pattern: Use DataService for price history and financial metrics
+- Gotcha: Use pd.isna() and pd.isnull() to check for NaN values in pandas
+- Pattern: Export convenience functions like run_*_analyst(state, llm_service) for workflow integration
+- Reference: ai-hedge-fund/src/agents/technicals.py has more sophisticated technical analysis we can use later
