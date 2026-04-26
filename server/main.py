@@ -13,7 +13,7 @@ API 文档:
 
 import os
 from datetime import datetime
-from typing import Literal
+from typing import Literal, Optional
 from pydantic import BaseModel, Field
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
@@ -82,23 +82,23 @@ class AnalysisRequest(BaseModel):
         description="分析模式: tradingagents(8阶段), aihedgefund(4层), fusion(Leader决策)"
     )
     # Leader选择（fusion/aihedgefund模式需要）
-    leader_id: str | None = Field(
+    leader_id: Optional[str] = Field(
         default=None,
         description="投资大师ID，如 warren_buffett, ben_graham 等"
     )
     # 风险偏好
-    risk_level: Literal["conservative", "moderate", "aggressive"] | None = Field(
+    risk_level: Optional[Literal["conservative", "moderate", "aggressive"]] = Field(
         default=None,
         description="风险偏好: conservative(保守), moderate(中性), aggressive(激进)"
     )
     # 收敛参数
-    convergence_gap: float | None = Field(
+    convergence_gap: Optional[float] = Field(
         default=15.0,
         ge=5.0,
         le=30.0,
         description="置信度差距阈值，低于此值认为收敛"
     )
-    early_stop_gap: float | None = Field(
+    early_stop_gap: Optional[float] = Field(
         default=10.0,
         ge=5.0,
         le=20.0,
@@ -117,10 +117,10 @@ class SignalModel(BaseModel):
 class RecommendationModel(BaseModel):
     action: Literal["buy", "hold", "sell", "watch"]
     confidence: int
-    entry_price: float | None = None
-    exit_price: float | None = None
-    stop_loss: float | None = None
-    position_size: float | None = None
+    entry_price: Optional[float] = None
+    exit_price: Optional[float] = None
+    stop_loss: Optional[float] = None
+    position_size: Optional[float] = None
     timeframe: str
     risks: list[str]
 
@@ -132,12 +132,12 @@ class AnalysisResponse(BaseModel):
     duration_ms: int
     iterations: int
     signals: list[SignalModel]
-    debate_result: dict | None = None
+    debate_result: Optional[dict] = None
     summary: str
     model: str
     total_tokens: int
     recommendation: RecommendationModel
-    error: str | None = None
+    error: Optional[str] = None
 
 
 class HealthResponse(BaseModel):
@@ -158,9 +158,9 @@ class QuoteResponse(BaseModel):
     low: float
     open: float
     prev_close: float
-    pe: float | None = None
-    pb: float | None = None
-    market_cap: str | None = None
+    pe: Optional[float] = None
+    pb: Optional[float] = None
+    market_cap: Optional[str] = None
 
 
 # ========== API 端点 ==========
