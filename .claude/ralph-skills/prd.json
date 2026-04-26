@@ -1,78 +1,96 @@
 {
   "project": "FinancePulse",
   "branchName": "ralph/multi-agent-stock-analysis",
-  "description": "修复前后端适配性问题 - API参数、工作流路由、端点对接",
+  "description": "首页和数据页对齐 PRD - 替换硬编码数据为真实API调用",
   "userStories": [
     {
-      "id": "US-026",
-      "title": "更新后端 AnalysisRequest 模型",
-      "description": "添加 mode, leader_id, risk_level 参数",
+      "id": "US-031",
+      "title": "实现后端市场数据API",
+      "description": "实现恐惧贪婪、北向资金、涨跌停等数据API",
       "acceptanceCriteria": [
-        "AnalysisRequest 添加 mode: 'tradingagents' | 'aihedgefund' | 'fusion'",
-        "AnalysisRequest 添加 leader_id?: string",
-        "AnalysisRequest 添加 risk_level?: 'conservative' | 'moderate' | 'aggressive'",
-        "AnalysisRequest 添加 convergence_gap?: number",
-        "AnalysisRequest 添加 early_stop_gap?: number",
+        "实现 GET /api/market/fear-greed 返回恐惧贪婪指数",
+        "实现 GET /api/market/northbound 返回北向资金数据",
+        "实现 GET /api/market/limit-up-down 返回涨跌停数量",
+        "实现 GET /api/market/sentiment 返回市场情绪数据",
         "Python 语法检查通过"
       ],
       "priority": 1,
-      "passes": true,
-      "notes": "修改 server/main.py"
+      "passes": false,
+      "notes": "在后端 server/main.py 或新建 api/market.py"
     },
     {
-      "id": "US-027",
-      "title": "实现工作流路由逻辑",
-      "description": "根据 mode 参数选择不同工作流",
+      "id": "US-032",
+      "title": "实现前端 marketData API 调用",
+      "description": "更新 marketData.ts 使用后端API",
       "acceptanceCriteria": [
-        "TradingAgents 模式使用 tradingagents_workflow (8阶段)",
-        "AIHedgeFund 模式使用 aihedgefund_workflow (4层)",
-        "Fusion 模式使用 fusion_workflow (Leader决策)",
-        "Python 语法检查通过"
+        "fetchFearGreedIndex 调用后端 /api/market/fear-greed",
+        "fetchNorthboundData 调用后端 /api/market/northbound",
+        "fetchLimitUpDown 调用后端 /api/market/limit-up-down",
+        "移除所有硬编码 fallback，改用真实数据",
+        "Typecheck passes"
       ],
       "priority": 1,
-      "passes": true,
-      "notes": "修改 server/main.py analyze 端点"
+      "passes": false,
+      "notes": "修改 src/services/api/marketData.ts"
     },
     {
-      "id": "US-028",
-      "title": "添加 /api/leaders 端点",
-      "description": "返回19位投资大师列表",
+      "id": "US-033",
+      "title": "更新 DashboardHome 实时数据",
+      "description": "DashboardHome 使用真实API数据",
       "acceptanceCriteria": [
-        "实现 GET /api/leaders 端点",
-        "返回 LEADERS 配置中的19位大师",
-        "格式: { leaders: [{id, name, style, avatar, description}] }",
-        "Python 语法检查通过"
-      ],
-      "priority": 1,
-      "passes": true,
-      "notes": "修改 server/main.py，导入 config.leaders"
-    },
-    {
-      "id": "US-029",
-      "title": "修复前端 getLeaders fallback",
-      "description": "当后端不可用时使用本地 fallback",
-      "acceptanceCriteria": [
-        "getLeaders() 在 404 时使用本地 leaders 数组",
-        "确保 AnalysisParams 能正常显示大师选择",
+        "恐惧贪婪指数使用 fetchFearGreedIndex()",
+        "北向资金使用 fetchNorthboundData()",
+        "市场情绪使用真实数据",
+        "页面加载时自动刷新数据",
         "Typecheck passes"
       ],
       "priority": 2,
-      "passes": true,
-      "notes": "修改 src/services/api/apiService.ts"
+      "passes": false,
+      "notes": "修改 src/pages/DashboardHome.tsx"
     },
     {
-      "id": "US-030",
-      "title": "验证完整流程",
-      "description": "验证前端参数正确传递到后端并使用对应工作流",
+      "id": "US-034",
+      "title": "更新 DataPage 实时数据",
+      "description": "DataPage 使用真实API数据",
       "acceptanceCriteria": [
-        "前端设置 mode=tradingagents → 后端使用 tradingagents_workflow",
-        "前端设置 mode=aihedgefund → 后端使用 aihedgefund_workflow",
-        "前端设置 mode=fusion → 后端使用 fusion_workflow",
-        "前端选择 leader → 后端使用对应 leader",
-        "Python 语法检查通过"
+        "市场指数使用 fetchMultipleQuotes()",
+        "北向资金趋势使用 fetchNorthboundData()",
+        "宏观数据使用真实API",
+        "移除所有 mockMacroIndicators 等硬编码",
+        "Typecheck passes"
+      ],
+      "priority": 2,
+      "passes": false,
+      "notes": "修改 src/pages/DataPage.tsx"
+    },
+    {
+      "id": "US-035",
+      "title": "实现我的关注功能",
+      "description": "实现股票关注列表和快捷跳转",
+      "acceptanceCriteria": [
+        "实现关注股票列表的本地存储",
+        "显示关注股票的实时行情",
+        "点击跳转分析页面",
+        "支持添加/移除关注",
+        "Typecheck passes"
       ],
       "priority": 3,
-      "passes": true,
+      "passes": false,
+      "notes": "新增或修改 DashboardHome.tsx"
+    },
+    {
+      "id": "US-036",
+      "title": "验证首页对齐 PRD",
+      "description": "验证首页和数据页符合 PRD Section 13/14 设计",
+      "acceptanceCriteria": [
+        "DashboardHome 布局符合 PRD 13.2",
+        "DataPage 布局符合 PRD 14.1",
+        "所有数据为实时API调用",
+        "无硬编码数据",
+        "Typecheck passes"
+      ],
+      "priority": 4,
+      "passes": false,
       "notes": "验证完成后更新 progress.txt"
     }
   ]

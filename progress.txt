@@ -4,7 +4,14 @@ FinancePulse - Ralph Agent Workflow Progress
 Date: 2026-04-26
 Branch: ralph/multi-agent-stock-analysis
 
-Completed User Stories (US-026 to US-030):
+## Codebase Patterns
+- Python 语法检查: 使用 `python3 -m py_compile <file>.py`
+- FastAPI Pydantic 模型: 定义在 main.py 顶部，与端点函数在同一文件
+- HTTP 请求: 在异步端点内使用 `import httpx` 而非顶层导入
+- 外部 API 统一在 server/main.py 中实现，提供 fallback 数据
+- TypeScript 检查: `npx tsc --noEmit --skipLibCheck`
+
+Completed User Stories (US-026 to US-031):
 --------------------------------------------------------------------------------
 US-026: 更新后端 AnalysisRequest 模型
   - 添加 mode, leader_id, risk_level 参数
@@ -59,3 +66,29 @@ b2930d3 feat: US-011 - 更新 apiService 支持分析模式参数
 e537056 feat: restore all tradingagents components and workflows
 
 All US-026 to US-030 completed successfully.
+
+================================================================================
+US-031: 实现后端市场数据API
+================================================================================
+Date: 2026-04-26 12:15
+
+What was implemented:
+- 实现 GET /api/market/fear-greed - 恐惧贪婪指数 (Alternative.me API)
+- 实现 GET /api/market/northbound - 北向资金数据 (东方财富 API)
+- 实现 GET /api/market/limit-up-down - 涨跌停统计 (东方财富 API)
+- 实现 GET /api/market/sentiment - 市场情绪综合数据
+- 添加 FearGreedResponse, NorthboundItem, NorthboundResponse, LimitUpDownResponse, SentimentResponse 模型
+
+Files changed:
+- server/main.py (+225 lines)
+
+Quality checks:
+- Python syntax check: PASSED ✓
+
+**Learnings for future iterations:**
+  - Python 语法检查用: python3 -m py_compile main.py
+  - 后端市场数据API使用httpx进行HTTP请求
+  - FastAPI 异步端点中import httpx需要放在函数内部避免顶层导入问题
+  - API响应模型定义在 main.py 顶部，Pydantic BaseModel
+
+**Note:** Please manually update .claude/ralph-skills/prd.json - change US-031 passes to true
