@@ -55,7 +55,7 @@
         "Typecheck passes"
       ],
       "priority": 2,
-      "passes": false,
+      "passes": true,
       "notes": "修改 DataPage.tsx 汇率部分"
     },
     {

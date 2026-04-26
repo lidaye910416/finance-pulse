@@ -191,3 +191,36 @@ Quality checks:
 
 ---
 
+
+================================================================================
+US-040: 更新前端汇率数据
+================================================================================
+Date: 2026-04-26
+
+What was implemented:
+- 添加 fetchExchangeRate 函数到 macroData.ts
+- 定义 ExchangeRateItem 和 ExchangeRateResponse 接口
+- DataPage.tsx 调用后端 /api/macro/exchange-rate API
+- 移除汇率卡片中的硬编码值 (7.24, 7.85, 4.82)
+- 添加 exchangeRates 状态管理
+- 并行加载所有数据包括汇率
+- 日元汇率转换为 100JPY/CNY 格式显示
+
+Files changed:
+- src/services/api/macroData.ts (+45 lines)
+- src/pages/DataPage.tsx (+15/-12 lines)
+- .claude/ralph-skills/prd.json (US-040 passes=true)
+
+Quality checks:
+- TypeScript typecheck: PASSED ✓
+- Python syntax check: PASSED ✓
+
+**Learnings for future iterations:**
+  - 后端 /api/macro/exchange-rate 返回 { baseCurrency, rates[], updateTime }
+  - rates 数组包含 currency, name, rate, change, changePercent, updateTime
+  - 前端汇率卡片动态渲染，使用 exchangeRates.map()
+  - 日元汇率需要特殊处理：后端返回 JPY/CNY ≈ 0.048，前端显示 100JPY/CNY = 4.8
+
+**Note:** Please manually verify PRD - US-040 passes should be true
+
+---

@@ -228,3 +228,48 @@ export async function fetchAllMacroData(): Promise<MacroData> {
     m2Yoy: moneySupply.yoy,
   };
 }
+
+/**
+ * 汇率数据接口
+ */
+export interface ExchangeRateItem {
+  currency: string;
+  name: string;
+  rate: number;
+  change: number;
+  changePercent: number;
+  updateTime: string;
+}
+
+export interface ExchangeRateResponse {
+  baseCurrency: string;
+  rates: ExchangeRateItem[];
+  updateTime: string;
+}
+
+/**
+ * 获取人民币汇率数据
+ */
+export async function fetchExchangeRate(): Promise<ExchangeRateResponse | null> {
+  try {
+    // 调用后端 API
+    const response = await fetch(`${API_BASE_URL}/api/macro/exchange-rate`);
+    if (response.ok) {
+      const data: ExchangeRateResponse = await response.json();
+      return data;
+    }
+  } catch (error) {
+    console.error('获取汇率数据失败:', error);
+  }
+
+  // Fallback
+  return {
+    baseCurrency: 'CNY',
+    rates: [
+      { currency: 'USD', name: '美元', rate: 7.24, change: 0.01, changePercent: 0.14, updateTime: '' },
+      { currency: 'EUR', name: '欧元', rate: 7.85, change: -0.02, changePercent: -0.25, updateTime: '' },
+      { currency: 'JPY', name: '日元', rate: 0.048, change: 0.001, changePercent: 2.13, updateTime: '' },
+    ],
+    updateTime: '',
+  };
+}

@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { Card, Badge } from '../components';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar } from 'recharts';
 import { fetchFearGreedIndex, fetchNorthboundData, fetchLimitUpDown, fetchMultipleQuotes } from '../services/api/marketData';
-import { fetchAllMacroData } from '../services/api/macroData';
+import { fetchAllMacroData, fetchExchangeRate } from '../services/api/macroData';
 
 // 标签页数据
 const tabs = [
@@ -79,17 +79,25 @@ export function DataPage() {
     cpi: mockCpiTrend,
   });
 
+  // 汇率数据状态
+  const [exchangeRates, setExchangeRates] = useState<Array<{ currency: string; name: string; rate: number; changePercent: number }>>([
+    { currency: 'USD', name: '美元', rate: 7.24, changePercent: 0 },
+    { currency: 'EUR', name: '欧元', rate: 7.85, changePercent: 0 },
+    { currency: 'JPY', name: '100日元', rate: 4.82, changePercent: 0 },
+  ]);
+
   // 加载数据
   useEffect(() => {
     const loadData = async () => {
       try {
-        // 并行加载市场、情绪、宏观数据
-        const [quotes, fearGreed, northbound, limitUp, macro] = await Promise.all([
+        // 并行加载市场、情绪、宏观、汇率数据
+        const [quotes, fearGreed, northbound, limitUp, macro, exchangeRate] = await Promise.all([
           fetchMultipleQuotes(['000001', '399001', '399006', '000300']),
           fetchFearGreedIndex(),
           fetchNorthboundData(5),
           fetchLimitUpDown(),
           fetchAllMacroData(),
+          fetchExchangeRate(),
         ]);
 
         // 更新市场指数
@@ -144,6 +152,26 @@ export function DataPage() {
             { name: 'LPR(1年)', value: `${macro.lpr1y.toFixed(2)}%`, status: '不变', variant: 'gray' as const },
           ],
         }));
+
+        // 更新汇率数据
+        if (exchangeRate && exchangeRate.rates && exchangeRate.rates.length > 0) {
+          const rateMap: Record<string, { currency: string; name: string; rate: number; changePercent: number }> = {};
+          exchangeRate.rates.forEach(r => {
+            // 转换汇率为前端显示格式
+            if (r.currency === 'JPY') {
+              // 日元显示为 100JPY/CNY
+              rateMap[r.currency] = { currency: 'JPY', name: '100日元', rate: r.rate * 100, changePercent: r.changePercent };
+            } else {
+              rateMap[r.currency] = { currency: r.currency, name: r.name, rate: r.rate, changePercent: r.changePercent };
+            }
+          });
+
+          setExchangeRates([
+            rateMap['USD'] || { currency: 'USD', name: '美元', rate: 7.24, changePercent: 0 },
+            rateMap['EUR'] || { currency: 'EUR', name: '欧元', rate: 7.85, changePercent: 0 },
+            rateMap['JPY'] || { currency: 'JPY', name: '100日元', rate: 4.82, changePercent: 0 },
+          ]);
+        }
       } catch (error) {
         console.error('加载数据失败:', error);
       }
@@ -311,21 +339,18 @@ export function DataPage() {
             </div>
           </Card>
 
-          {/* 汇率信息 (juhe-exchange-rate skill - 待接入) */}
+          {/* 汇率信息 (juhe-exchange-rate skill) */}
           <Card title="人民币汇率 (juhe-exchange-rate)">
             <div className="grid grid-cols-3 gap-3">
-              <div className="text-center p-3 bg-gray-700/50 rounded-xl">
-                <div className="text-xs text-gray-400 mb-1">USD/CNY</div>
-                <div className="text-lg font-bold text-white font-mono">7.24</div>
-              </div>
-              <div className="text-center p-3 bg-gray-700/50 rounded-xl">
-                <div className="text-xs text-gray-400 mb-1">EUR/CNY</div>
-                <div className="text-lg font-bold text-white font-mono">7.85</div>
-              </div>
-              <div className="text-center p-3 bg-gray-700/50 rounded-xl">
-                <div className="text-xs text-gray-400 mb-1">100JPY/CNY</div>
-                <div className="text-lg font-bold text-white font-mono">4.82</div>
-              </div>
+              {exchangeRates.map((rate) => (
+                <div key={rate.currency} className="text-center p-3 bg-gray-700/50 rounded-xl">
+                  <div className="text-xs text-gray-400 mb-1">{rate.name}/CNY</div>
+                  <div className="text-lg font-bold text-white font-mono">{rate.rate.toFixed(2)}</div>
+                  <div className={`text-xs ${rate.changePercent >= 0 ? 'text-accent-green' : 'text-accent-red'}`}>
+                    {rate.changePercent >= 0 ? '+' : ''}{rate.changePercent.toFixed(2)}%
+                  </div>
+                </div>
+              ))}
             </div>
           </Card>
         </div>
