@@ -83,8 +83,8 @@
         "Typecheck passes"
       ],
       "priority": 6,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "已完成 - 创建了risk_manager.py，实现波动率计算函数(calculate_volatility_metrics)、波动率调整仓位限制(calculate_volatility_adjusted_limit)、相关性调整(calculate_correlation_multiplier)"
     },
     {
       "id": "US-007",
