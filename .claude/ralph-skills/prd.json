@@ -72,7 +72,7 @@
         "Python 语法检查通过"
       ],
       "priority": 3,
-      "passes": false,
+      "passes": true,
       "notes": "验证完成后更新 progress.txt"
     }
   ]
