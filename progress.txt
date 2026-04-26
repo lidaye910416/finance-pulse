@@ -10,6 +10,10 @@ Branch: ralph/multi-agent-stock-analysis
 - HTTP 请求: 在异步端点内使用 `import httpx` 而非顶层导入
 - 外部 API 统一在 server/main.py 中实现，提供 fallback 数据
 - TypeScript 检查: `npx tsc --noEmit --skipLibCheck`
+- 后端 API 基础 URL: localhost:5000 (server/main.py)
+- 前端 API_BASE_URL: localhost:5000 (src/services/api/*.ts)
+- 宏观数据前端: macroData.ts 调用后端 /api/macro 聚合接口
+- 后端宏观数据字段: gdp.current, cpi.yoy/mom, pmi.manufacturing, lpr.oneYear/fiveYear
 
 Completed User Stories (US-026 to US-031):
 --------------------------------------------------------------------------------
