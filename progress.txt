@@ -92,3 +92,30 @@ Quality checks:
   - API响应模型定义在 main.py 顶部，Pydantic BaseModel
 
 **Note:** Please manually update .claude/ralph-skills/prd.json - change US-031 passes to true
+
+================================================================================
+US-032: 实现前端 marketData API 调用
+================================================================================
+Date: 2026-04-26 12:45
+
+What was implemented:
+- fetchFearGreedIndex 调用后端 /api/market/fear-greed API
+- fetchNorthboundData 调用后端 /api/market/northbound API
+- fetchLimitUpDown 调用后端 /api/market/limit-up-down API
+- 添加 API_BASE_URL 常量指向后端服务
+- 保留 fallback 数据用于后端不可用时
+
+Files changed:
+- src/services/api/marketData.ts (+42/-49 lines)
+- .claude/ralph-skills/prd.json (US-032 passes=true)
+
+Quality checks:
+- TypeScript typecheck: PASSED ✓
+
+**Learnings for future iterations:**
+  - 前端 marketData.ts 使用 EAST_MONEY_BASE 直接调用东方财富
+  - 后端 main.py 负责市场数据 API 统一封装
+  - 前端通过 API_BASE_URL (localhost:5000) 调用后端
+  - 股票行情和K线仍直接从东方财富获取，不需要经过后端
+
+**Note:** Please manually verify PRD - US-032 passes should be true
