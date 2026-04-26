@@ -1,142 +1,57 @@
 {
   "project": "FinancePulse",
   "branchName": "ralph/multi-agent-stock-analysis",
-  "description": "多智能体股票分析系统 - 基于TradingAgents和ai-hedge-fund的三种分析模式",
+  "description": "重构 AnalysisPage 对齐 PRD Section 12 - 集成 AnalysisParams/SignalPanel/RecommendationCard 组件",
   "userStories": [
     {
-      "id": "US-001",
-      "title": "实现 News Analyst 分析师",
-      "description": "创建新闻分析师节点",
+      "id": "US-011",
+      "title": "更新 apiService 支持分析模式参数",
+      "description": "扩展 analyzeStock 方法支持 mode/leaderId/riskLevel 等参数",
       "acceptanceCriteria": [
-        "创建 agents/tradingagents/researchers/news.py",
-        "集成到 tradingagents_workflow.py 第3阶段",
+        "analyzeStock 方法支持 mode: 'tradingagents' | 'aihedgefund' | 'fusion'",
+        "analyzeStock 方法支持 leaderId 参数",
+        "analyzeStock 方法支持 maxIterations/convergenceGap/earlyStopGap",
+        "analyzeStock 方法支持 riskLevel: 'conservative' | 'moderate' | 'aggressive'",
         "Typecheck passes"
       ],
       "priority": 1,
       "passes": true,
-      "notes": "已完成"
+      "notes": "需要更新 src/services/api/apiService.ts"
     },
     {
-      "id": "US-002",
-      "title": "实现 Fundamentals Analyst",
-      "description": "创建基本面分析师",
+      "id": "US-012",
+      "title": "重构 AnalysisPage 集成 PRD 组件",
+      "description": "重写 AnalysisPage 对齐 PRD Section 12 布局，集成 AnalysisParams/SignalPanel/RecommendationCard",
       "acceptanceCriteria": [
-        "创建 agents/tradingagents/researchers/fundamentals.py",
-        "集成到 tradingagents_workflow.py 第4阶段",
+        "添加 StockHeader（股票搜索+行情显示）",
+        "添加 KlineChart 和 FundFlowPanel 占位组件",
+        "集成 AnalysisParams 组件用于参数设置",
+        "集成 SignalPanel 组件显示分析师信号",
+        "集成 RecommendationCard 组件显示投资建议",
+        "实现开始分析按钮调用 API",
+        "根据分析结果更新 SignalPanel 和 RecommendationCard",
         "Typecheck passes"
       ],
       "priority": 2,
       "passes": true,
-      "notes": "已完成"
+      "notes": "需要重写 src/pages/AnalysisPage.tsx"
     },
     {
-      "id": "US-003",
-      "title": "实现 Risk Debate 节点",
-      "description": "实现风险辩论节点，从三种风险偏好角度评估投资",
+      "id": "US-013",
+      "title": "验证前端与 PRD 对齐",
+      "description": "确保重构后的页面符合 PRD Section 12 设计规范",
       "acceptanceCriteria": [
-        "创建 agents/tradingagents/risk_debate.py",
-        "支持三种风险视角：conservative/moderate/aggressive",
-        "输出风险辩论历史和最终建议",
-        "集成到 tradingagents_workflow.py 第7阶段",
+        "页面布局符合 PRD Section 12.1 图示",
+        "AnalysisParams 支持三种模式切换",
+        "AnalysisParams 支持大师选择（ai-hedge-fund/fusion模式）",
+        "SignalPanel 显示5位分析师置信度条",
+        "SignalPanel 显示多空辩论结果和收敛状态",
+        "RecommendationCard 显示 action/置信度/仓位/止损",
         "Typecheck passes"
       ],
       "priority": 3,
       "passes": true,
-      "notes": "已完成 risk_debate.py，包含保守型/适度型/激进型三种风险视角"
-    },
-    {
-      "id": "US-004",
-      "title": "实现 Leader 基类和工厂函数",
-      "description": "创建 Leader 抽象基类",
-      "acceptanceCriteria": [
-        "创建 agents/leaders/base.py",
-        "定义 LeaderBase 抽象类",
-        "实现 create_leader(leader_id) 工厂函数",
-        "Typecheck passes"
-      ],
-      "priority": 4,
-      "passes": true,
-      "notes": "已完成 - 创建了包含6位大师的Leader体系（Warren Buffett, Ben Graham, Peter Lynch, Charlie Munger, Michael Burry, Nassim Taleb）"
-    },
-    {
-      "id": "US-005",
-      "title": "实现 Warren Buffett Leader",
-      "description": "实现巴菲特大师的具体投资逻辑",
-      "acceptanceCriteria": [
-        "创建 agents/leaders/warren_buffett.py",
-        "实现7维度分析",
-        "计算安全边际",
-        "Typecheck passes"
-      ],
-      "priority": 5,
-      "passes": true,
-      "notes": "已完成 - 创建了独立的warren_buffett.py，包含7维度分析框架（业务质量、盈利能力、成长性、财务健康、内在价值、安全边际、管理层）和安全边际计算"
-    },
-    {
-      "id": "US-006",
-      "title": "实现 Risk Manager 完整版",
-      "description": "基于波动率实现风险管理agent",
-      "acceptanceCriteria": [
-        "创建 agents/risk_manager.py",
-        "实现波动率计算函数",
-        "输出每个ticker的剩余仓位限制",
-        "Typecheck passes"
-      ],
-      "priority": 6,
-      "passes": true,
-      "notes": "已完成 - 创建了risk_manager.py，实现波动率计算函数(calculate_volatility_metrics)、波动率调整仓位限制(calculate_volatility_adjusted_limit)、相关性调整(calculate_correlation_multiplier)"
-    },
-    {
-      "id": "US-007",
-      "title": "更新 AI Hedge Fund 工作流",
-      "description": "更新aihedgefund_workflow.py",
-      "acceptanceCriteria": [
-        "支持 selected_analysts 参数",
-        "所有分析师并行运行",
-        "Typecheck passes"
-      ],
-      "priority": 7,
-      "passes": true,
-      "notes": "已完成"
-    },
-    {
-      "id": "US-008",
-      "title": "创建前端 AnalysisParams 组件",
-      "description": "实现参数设置面板",
-      "acceptanceCriteria": [
-        "创建 src/components/analysis/AnalysisParams.tsx",
-        "支持三种模式切换",
-        "Typecheck passes"
-      ],
-      "priority": 8,
-      "passes": true,
-      "notes": "已完成"
-    },
-    {
-      "id": "US-009",
-      "title": "创建 SignalPanel 组件",
-      "description": "实现5位分析师信号可视化面板",
-      "acceptanceCriteria": [
-        "创建 src/components/analysis/SignalPanel.tsx",
-        "显示置信度条形图",
-        "Typecheck passes"
-      ],
-      "priority": 9,
-      "passes": true,
-      "notes": "已完成"
-    },
-    {
-      "id": "US-010",
-      "title": "创建 RecommendationCard 组件",
-      "description": "实现投资建议展示卡片",
-      "acceptanceCriteria": [
-        "创建 src/components/analysis/RecommendationCard.tsx",
-        "显示 action/置信度/仓位/止损",
-        "Typecheck passes"
-      ],
-      "priority": 10,
-      "passes": true,
-      "notes": "已完成"
+      "notes": "验证完成后更新 progress.txt"
     }
   ]
 }

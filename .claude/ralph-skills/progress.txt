@@ -107,3 +107,36 @@
 - Annualized volatility = daily_vol * sqrt(252)
 - Position limit mapping: low_vol(<15%) -> 25%, med_vol(15-30%) -> 12.5-20%, high_vol(30-50%) -> 5-15%, very_high(>50%) -> 10%
 - Correlation multiplier: high corr (>=0.8) -> 0.7x, neutral (0.4-0.6) -> 1.0x, low corr (<0.2) -> 1.10x
+
+
+## 2026-04-26 14:00 - US-011
+- Updated apiService.ts to support AnalysisMode parameter
+- Added AnalyzeStockParams interface with mode, leaderId, convergenceGap, earlyStopGap, riskLevel
+- Changed analyzeStock method to accept AnalyzeStockParams object instead of positional parameters
+- Typecheck passes
+
+**Learnings for future iterations:**
+- Pattern: Use object parameters for API methods to support optional params
+- Pattern: AnalysisMode type is defined in apiService.ts and reused in AnalysisParams.tsx
+- Gotcha: TypeScript noEmit check passes, no build required for type verification
+
+
+## 2026-04-26 15:30 - US-012
+- Rewrote AnalysisPage.tsx to align with PRD Section 12 layout
+- Integrated StockHeader component for stock search and quote display
+- Added KlineChart and FundFlowPanel placeholder components
+- Integrated AnalysisParams component for parameter configuration
+- Integrated SignalPanel to display analyst signals and debate results
+- Integrated RecommendationCard to display investment recommendations
+- Added SummaryText component to display analysis summary
+- Implemented handleStartAnalysis to call apiService.analyzeStock with mode/leaderId/riskLevel params
+- Updated SignalPanel and RecommendationCard based on analysis results
+- Added analysis state management (idle/analyzing/completed/error)
+- Build passes
+
+**Learnings for future iterations:**
+- Pattern: Use object parameters for API calls to support optional params
+- Pattern: Export AnalysisMode type from AnalysisParams.tsx for use in parent components
+- Pattern: AnalysisState type ('idle'|'analyzing'|'completed'|'error') for UI state management
+- Gotcha: apiService.getLeaders() requires backend to be running, add fallback in component
+- Gotcha: When calling analyzeStock, convert preset strings to numeric params using getConvergencePresets()
