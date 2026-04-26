@@ -2,8 +2,6 @@
  * API 服务 - 调用后端 LangGraph 服务
  */
 
-import { useSettingsStore } from '../../stores/settingsStore';
-
 // ========== API 配置 ==========
 
 const API_BASE_URL = 'http://localhost:5000';
@@ -156,6 +154,42 @@ class APIService {
   /**
    * 检查服务状态
    */
+  
+  /**
+   * 获取投资大师列表
+   */
+  async getLeaders(): Promise<ApiLeader[]> {
+    const response = await fetch(`${this.baseUrl}/api/leaders`, {
+      method: 'GET',
+      signal: AbortSignal.timeout(10000),
+    });
+    if (!response.ok) throw new Error(`获取大师列表失败: ${response.status}`);
+    const data = await response.json();
+    return data.leaders || [];
+  }
+
+  /**
+   * 获取收敛预设配置
+   */
+  async getConvergencePresets(): Promise<ApiConvergencePreset[]> {
+    return [
+      { id: 'quick', name: '快速决策', max_iterations: 1, convergence_gap: 20, early_stop_gap: 15 },
+      { id: 'standard', name: '标准设置', max_iterations: 3, convergence_gap: 15, early_stop_gap: 10 },
+      { id: 'deep', name: '深度分析', max_iterations: 5, convergence_gap: 10, early_stop_gap: 5 },
+    ];
+  }
+
+  /**
+   * 获取风险偏好设置
+   */
+  async getRiskLevels(): Promise<ApiRiskPreference[]> {
+    return [
+      { id: 'conservative', name: '保守型', description: '严格风控，适合风险厌恶型投资者' },
+      { id: 'moderate', name: '平衡型', description: '平衡风险和收益，适合大多数投资者' },
+      { id: 'aggressive', name: '激进型', description: '追求高收益，适合风险承受能力强投资者' },
+    ];
+  }
+
   isServiceAvailable(): boolean {
     // 可以添加检查逻辑
     return true;
@@ -166,3 +200,31 @@ class APIService {
 
 export const apiService = new APIService();
 export default apiService;
+
+// ========== Leaders 类型 ==========
+
+export interface ApiLeader {
+  id: string;
+  name: string;
+  style: string;
+  avatar: string;
+  description: string;
+}
+
+export interface ApiConvergencePreset {
+  id: string;
+  name: string;
+  description?: string;
+  max_iterations: number;
+  convergence_gap: number;
+  early_stop_gap: number;
+}
+
+export interface ApiRiskPreference {
+  id: string;
+  name: string;
+  description: string;
+  max_position?: number;
+  stop_loss?: number;
+  volatility_alert?: number;
+}
