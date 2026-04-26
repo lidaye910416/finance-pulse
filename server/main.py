@@ -20,6 +20,10 @@ from fastapi.middleware.cors import CORSMiddleware
 from dotenv import load_dotenv
 
 from graph.workflow import create_workflow, CompiledGraph
+from graph.tradingagents_workflow import create_tradingagents_workflow
+from graph.aihedgefund_workflow import create_aihedgefund_workflow
+from graph.fusion_workflow import create_fusion_workflow
+from config.leaders import LEADERS
 from services.llm import LLMService
 from services.data import DataService
 
@@ -60,6 +64,34 @@ class AnalysisRequest(BaseModel):
     name: str = Field(default="", description="股票名称")
     include_history: bool = Field(default=False, description="是否包含历史分析")
     max_iterations: int = Field(default=3, ge=1, le=5, description="最大迭代次数")
+    # 分析模式
+    mode: Literal["tradingagents", "aihedgefund", "fusion"] = Field(
+        default="fusion",
+        description="分析模式: tradingagents(8阶段), aihedgefund(4层), fusion(Leader决策)"
+    )
+    # Leader选择（fusion/aihedgefund模式需要）
+    leader_id: str | None = Field(
+        default=None,
+        description="投资大师ID，如 warren_buffett, ben_graham 等"
+    )
+    # 风险偏好
+    risk_level: Literal["conservative", "moderate", "aggressive"] | None = Field(
+        default=None,
+        description="风险偏好: conservative(保守), moderate(中性), aggressive(激进)"
+    )
+    # 收敛参数
+    convergence_gap: float | None = Field(
+        default=15.0,
+        ge=5.0,
+        le=30.0,
+        description="置信度差距阈值，低于此值认为收敛"
+    )
+    early_stop_gap: float | None = Field(
+        default=10.0,
+        ge=5.0,
+        le=20.0,
+        description="提前停止阈值，高置信度时提前停止"
+    )
 
 
 class SignalModel(BaseModel):
