@@ -15,7 +15,7 @@
         "Python 语法检查通过"
       ],
       "priority": 1,
-      "passes": false,
+      "passes": true,
       "notes": "在后端 server/main.py 或新建 api/market.py"
     },
     {
@@ -30,7 +30,7 @@
         "Typecheck passes"
       ],
       "priority": 1,
-      "passes": false,
+      "passes": true,
       "notes": "修改 src/services/api/marketData.ts"
     },
     {
@@ -45,7 +45,7 @@
         "Typecheck passes"
       ],
       "priority": 2,
-      "passes": false,
+      "passes": true,
       "notes": "修改 src/pages/DashboardHome.tsx"
     },
     {
@@ -60,7 +60,7 @@
         "Typecheck passes"
       ],
       "priority": 2,
-      "passes": false,
+      "passes": true,
       "notes": "修改 src/pages/DataPage.tsx"
     },
     {
@@ -75,7 +75,7 @@
         "Typecheck passes"
       ],
       "priority": 3,
-      "passes": false,
+      "passes": true,
       "notes": "新增或修改 DashboardHome.tsx"
     },
     {
@@ -90,7 +90,7 @@
         "Typecheck passes"
       ],
       "priority": 4,
-      "passes": false,
+      "passes": true,
       "notes": "验证完成后更新 progress.txt"
     }
   ]

@@ -1,12 +1,15 @@
 /**
  * 市场数据 API 服务
- * 
- * 从东方财富获取真实市场数据
+ *
+ * 调用后端 FinancePulse API 获取市场数据
  */
 
 import type { Quote, KLine, NorthboundData } from '../data/types';
 
-// 东方财富 API 基础 URL
+// 后端 API 基础 URL
+const API_BASE_URL = 'http://localhost:5000';
+
+// 东方财富 API 基础 URL（用于股票行情和K线）
 const EAST_MONEY_BASE = 'https://push2.eastmoney.com';
 
 // 股票代码格式化
@@ -137,25 +140,22 @@ export async function fetchKLine(
  */
 export async function fetchNorthboundData(days: number = 7): Promise<NorthboundData[]> {
   try {
-    // 东方财富北向资金API
-    const url = `https://datacenter-web.eastmoney.com/api/data/v1/get?reportName=RPT_MUTUAL_MARKET_SH&columns=TRADE_DATE,HOLD_DATE,SECURITY_CODE_A,SECURITY_NAME_A,CLOSE_PRICE,MUTUAL_TYPE,MUTUAL_TYPE_NAME,BINDING_SH,SECUCODE&quoteColumns=&filter=(MUTUAL_TYPE="001")&pageNumber=1&pageSize=${days}&sortTypes=-1&sortColumns=TRADE_DATE&source=WEB&client=WEB`;
-
-    const response = await fetch(url);
-    if (!response.ok) return [];
-
-    const data = await response.json();
-    const list = data.result?.data || [];
-
-    return list.map((item: any) => ({
-      date: item.TRADE_DATE,
-      hkStock: (item.HOLD_DATE || 0) / 100000000, // 转换为亿
-      szStock: 0, // 需要单独查询深股通
-      total: (item.BINDING_SH || 0) / 100000000,
-    }));
+    // 调用后端 API
+    const response = await fetch(`${API_BASE_URL}/api/market/northbound?days=${days}`);
+    if (response.ok) {
+      const data = await response.json();
+      return data.items.map((item: any) => ({
+        date: item.date,
+        hkStock: item.hkStock,
+        szStock: item.szStock,
+        total: item.total,
+      }));
+    }
   } catch (error) {
     console.error('获取北向资金数据失败:', error);
-    return [];
   }
+
+  return [];
 }
 
 /**
@@ -163,25 +163,18 @@ export async function fetchNorthboundData(days: number = 7): Promise<NorthboundD
  */
 export async function fetchFearGreedIndex(): Promise<{ value: number; phase: string }> {
   try {
-    // Alternative.me API
-    const response = await fetch('https://api.alternative.me/fng/?limit=1');
-    if (!response.ok) {
-      return { value: 26, phase: '极度恐惧' };
+    // 调用后端 API
+    const response = await fetch(`${API_BASE_URL}/api/market/fear-greed`);
+    if (response.ok) {
+      const data = await response.json();
+      return { value: data.value, phase: data.phase };
     }
-
-    const data = await response.json();
-    const value = parseInt(data.data?.[0]?.value || '50');
-    
-    const phase = value <= 25 ? '极度恐惧' :
-                  value <= 45 ? '恐惧' :
-                  value <= 55 ? '中性' :
-                  value <= 75 ? '贪婪' : '极度贪婪';
-
-    return { value, phase };
   } catch (error) {
     console.error('获取恐惧贪婪指数失败:', error);
-    return { value: 26, phase: '极度恐惧' };
   }
+
+  // Fallback - 与后端保持一致
+  return { value: 26, phase: '极度恐惧' };
 }
 
 /**
@@ -189,16 +182,16 @@ export async function fetchFearGreedIndex(): Promise<{ value: number; phase: str
  */
 export async function fetchLimitUpDown(): Promise<{ limitUp: number; limitDown: number }> {
   try {
-    // TODO: 调用东方财富实时涨停统计API
-    // const limitUpUrl = 'https://push2.eastmoney.com/api/qt/clist/get?...';
-
-    // 简化实现，返回模拟数据
-    return {
-      limitUp: 47,
-      limitDown: 8,
-    };
+    // 调用后端 API
+    const response = await fetch(`${API_BASE_URL}/api/market/limit-up-down`);
+    if (response.ok) {
+      const data = await response.json();
+      return { limitUp: data.limitUp, limitDown: data.limitDown };
+    }
   } catch (error) {
     console.error('获取涨跌停统计失败:', error);
-    return { limitUp: 47, limitDown: 8 };
   }
+
+  // Fallback
+  return { limitUp: 47, limitDown: 8 };
 }
