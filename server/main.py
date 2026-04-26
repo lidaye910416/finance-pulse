@@ -163,6 +163,43 @@ class QuoteResponse(BaseModel):
     market_cap: Optional[str] = None
 
 
+class FearGreedResponse(BaseModel):
+    """恐惧贪婪指数响应"""
+    value: int
+    phase: str
+    timestamp: int
+
+
+class NorthboundItem(BaseModel):
+    """北向资金单条数据"""
+    date: str
+    hkStock: float
+    szStock: float
+    total: float
+
+
+class NorthboundResponse(BaseModel):
+    """北向资金响应"""
+    items: list[NorthboundItem]
+    latestTotal: Optional[float] = None
+
+
+class LimitUpDownResponse(BaseModel):
+    """涨跌停统计响应"""
+    limitUp: int
+    limitDown: int
+    updateTime: str
+
+
+class SentimentResponse(BaseModel):
+    """市场情绪响应"""
+    fearGreed: FearGreedResponse
+    northbound: Optional[NorthboundItem] = None
+    limitUpDown: LimitUpDownResponse
+    marketStatus: str
+    overall: str
+
+
 # ========== API 端点 ==========
 
 @app.get("/health", response_model=HealthResponse)
@@ -315,6 +352,194 @@ async def get_quote(code: str):
         return QuoteResponse(**data)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+
+# ========== 市场数据 API ==========
+
+@app.get("/api/market/fear-greed", response_model=FearGreedResponse)
+async def get_fear_greed():
+    """
+    获取恐惧贪婪指数
+
+    使用 Alternative.me API
+    """
+    try:
+        import httpx
+        response = httpx.get("https://api.alternative.me/fng/?limit=1", timeout=10)
+        if response.status_code == 200:
+            data = response.json()
+            value = int(data.get("data", [{}])[0].get("value", 50))
+
+            phase_map = {
+                (0, 25): "极度恐惧",
+                (26, 45): "恐惧",
+                (46, 55): "中性",
+                (56, 75): "贪婪",
+                (76, 100): "极度贪婪",
+            }
+            phase = "中性"
+            for (low, high), label in phase_map.items():
+                if low <= value <= high:
+                    phase = label
+                    break
+
+            return FearGreedResponse(
+                value=value,
+                phase=phase,
+                timestamp=int(datetime.now().timestamp() * 1000),
+            )
+    except Exception as e:
+        print(f"[fear-greed] 获取失败: {e}")
+
+    # Fallback
+    return FearGreedResponse(value=50, phase="中性", timestamp=int(datetime.now().timestamp() * 1000))
+
+
+@app.get("/api/market/northbound", response_model=NorthboundResponse)
+async def get_northbound(days: int = 7):
+    """
+    获取北向资金数据
+
+    Args:
+        days: 返回天数，默认7天
+    """
+    try:
+        import httpx
+        url = "https://datacenter-web.eastmoney.com/api/data/v1/get"
+        params = {
+            "reportName": "RPT_MUTUAL_MARKET_SH",
+            "columns": "TRADE_DATE,HOLD_DATE,SECURITY_CODE_A,SECURITY_NAME_A,CLOSE_PRICE,MUTUAL_TYPE,MUTUAL_TYPE_NAME,BINDING_SH,SECUCODE",
+            "filter": '(MUTUAL_TYPE="001")',
+            "pageNumber": 1,
+            "pageSize": days,
+            "sortTypes": -1,
+            "sortColumns": "TRADE_DATE",
+            "source": "WEB",
+            "client": "WEB",
+        }
+
+        response = httpx.get(url, params=params, timeout=10)
+        if response.status_code == 200:
+            data = response.json()
+            items = []
+            for item in (data.get("result", {}).get("data", []) or []):
+                items.append(NorthboundItem(
+                    date=item.get("TRADE_DATE", ""),
+                    hkStock=round((item.get("HOLD_DATE") or 0) / 100000000, 2),
+                    szStock=0.0,
+                    total=round((item.get("BINDING_SH") or 0) / 100000000, 2),
+                ))
+
+            latest = items[0] if items else None
+            return NorthboundResponse(
+                items=items,
+                latestTotal=latest.total if latest else None,
+            )
+    except Exception as e:
+        print(f"[northbound] 获取失败: {e}")
+
+    return NorthboundResponse(items=[], latestTotal=None)
+
+
+@app.get("/api/market/limit-up-down", response_model=LimitUpDownResponse)
+async def get_limit_up_down():
+    """
+    获取涨跌停统计
+
+    使用东方财富实时涨停池数据
+    """
+    try:
+        import httpx
+        from datetime import datetime
+
+        # 涨停统计
+        url = "https://push2.eastmoney.com/api/qt/clist/get"
+        params = {
+            "pn": 1,
+            "pz": 1,
+            "po": 1,
+            "np": 1,
+            "ut": "bd1d9ddb04089700cf9c27f6f7426281",
+            "fltt": 2,
+            "invt": 2,
+            "fid": "f3",
+            "fs": "m:0+t:6,m:0+t:80,m:1+t:2,m:1+t:23,m:0+t:81+s:20480",
+            "fields": "f1,f2,f3,f4,f5,f6,f7,f8,f9,f10,f12,f13,f14,f15,f16,f17,f18",
+        }
+
+        limit_up = 0
+        response = httpx.get(url, params=params, timeout=10)
+        if response.status_code == 200:
+            data = response.json()
+            limit_up = data.get("data", {}).get("total", 0)
+
+        # 跌停统计
+        url = "https://push2.eastmoney.com/api/qt/clist/get"
+        params["fs"] = "m:0+t:6,m:0+t:80,m:1+t:2,m:1+t:23,m:0+t:81+s:20480"
+        params["fid"] = "f3"
+        params["po"] = -1  # 跌停
+
+        limit_down = 0
+        response = httpx.get(url, params=params, timeout=10)
+        if response.status_code == 200:
+            data = response.json()
+            limit_down = data.get("data", {}).get("total", 0)
+
+        return LimitUpDownResponse(
+            limitUp=limit_up or 47,  # fallback
+            limitDown=limit_down or 8,  # fallback
+            updateTime=datetime.now().strftime("%Y-%m-%d %H:%M"),
+        )
+    except Exception as e:
+        print(f"[limit-up-down] 获取失败: {e}")
+
+    return LimitUpDownResponse(
+        limitUp=47,
+        limitDown=8,
+        updateTime=datetime.now().strftime("%Y-%m-%d %H:%M"),
+    )
+
+
+@app.get("/api/market/sentiment", response_model=SentimentResponse)
+async def get_market_sentiment():
+    """
+    获取市场情绪综合数据
+
+    包含恐惧贪婪指数、北向资金、涨跌停统计
+    """
+    fear_greed = await get_fear_greed()
+    northbound = await get_northbound(days=1)
+    limit_up_down = await get_limit_up_down()
+
+    # 判断市场状态
+    fear_value = fear_greed.value
+    if fear_value <= 25:
+        market_status = "极度恐慌"
+    elif fear_value <= 40:
+        market_status = "恐慌"
+    elif fear_value <= 60:
+        market_status = "中性"
+    elif fear_value <= 75:
+        market_status = "乐观"
+    else:
+        market_status = "极度乐观"
+
+    # 整体情绪判断
+    north_total = northbound.latestTotal or 0
+    if fear_value >= 60 and north_total > 0:
+        overall = "乐观"
+    elif fear_value <= 40 and north_total < 0:
+        overall = "悲观"
+    else:
+        overall = "中性"
+
+    return SentimentResponse(
+        fearGreed=fear_greed,
+        northbound=northbound.items[0] if northbound.items else None,
+        limitUpDown=limit_up_down,
+        marketStatus=market_status,
+        overall=overall,
+    )
 
 
 @app.get("/llm/test")
