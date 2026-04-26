@@ -11,29 +11,19 @@ const tabs = [
   { id: 'sentiment', label: '情绪', icon: '😰' },
 ];
 
-// 宏观数据fallback（API不可用时使用）
+// 宏观数据fallback（API不可用时显示 *）
 const fallbackMacroIndicators = [
-  { name: 'GDP增速', value: '5.0%', status: '稳定', variant: 'green' as const },
-  { name: 'CPI', value: '+1.1%', status: '温和', variant: 'blue' as const },
-  { name: 'PMI', value: '49.2', status: '荣枯线下', variant: 'yellow' as const },
-  { name: 'LPR(1年)', value: '3.45%', status: '不变', variant: 'gray' as const },
+  { name: 'GDP增速', value: '*', status: '-', variant: 'gray' as const },
+  { name: 'CPI', value: '*', status: '-', variant: 'gray' as const },
+  { name: 'PMI', value: '*', status: '-', variant: 'gray' as const },
+  { name: 'LPR(1年)', value: '*', status: '-', variant: 'gray' as const },
 ];
 
-// GDP趋势数据（后端暂无历史接口，暂时保留）
-const mockGdpTrend = [
-  { year: '2023', value: 5.2 },
-  { year: '2024', value: 5.0 },
-  { year: '2025-Q1', value: 5.4 },
-  { year: '2025-Q2', value: 5.3 },
-];
+// GDP趋势数据（API不可用时为空）
+const fallbackGdpTrend: { year: string; value: number }[] = [];
 
-// CPI趋势数据（后端暂无历史接口，暂时保留）
-const mockCpiTrend = [
-  { month: '1月', value: 0.5 },
-  { month: '2月', value: 0.7 },
-  { month: '3月', value: 1.2 },
-  { month: '4月', value: 1.1 },
-];
+// CPI趋势数据（API不可用时为空）
+const fallbackCpiTrend: { month: string; value: number }[] = [];
 
 export function DataPage() {
   const [activeTab, setActiveTab] = useState('market');
@@ -62,32 +52,38 @@ export function DataPage() {
       variant: 'yellow' | 'green' | 'red' | 'blue' | 'gray';
     }>;
   }>({
-    fearGreed: 26,
-    phase: '极度恐惧',
+    fearGreed: 0,
+    phase: '-',
     signals: [
-      { label: '涨停数量', value: 47, status: '偏冰点', variant: 'yellow' },
-      { label: '跌停数量', value: 8, status: '正常', variant: 'green' },
-      { label: '北向资金', value: '+23亿', status: '净买入', variant: 'green' },
-      { label: '两融余额', value: '1.58万亿', status: '下降', variant: 'yellow' },
+      { label: '涨停数量', value: '*', status: '-', variant: 'gray' },
+      { label: '跌停数量', value: '*', status: '-', variant: 'gray' },
+      { label: '北向资金', value: '*', status: '-', variant: 'gray' },
+      { label: '两融余额', value: '*', status: '-', variant: 'gray' },
     ],
   });
 
   // 宏观数据状态
-  const [macroData, setMacroData] = useState({
+  const [macroData, setMacroData] = useState<{
+    indicators: Array<{ name: string; value: string; status: string; variant: 'yellow' | 'green' | 'red' | 'blue' | 'gray' }>;
+    gdp: { year: string; value: number }[];
+    cpi: { month: string; value: number }[];
+  }>({
     indicators: fallbackMacroIndicators,
-    gdp: mockGdpTrend,
-    cpi: mockCpiTrend,
+    gdp: fallbackGdpTrend,
+    cpi: fallbackCpiTrend,
   });
 
-  // 汇率数据状态
+  // 汇率数据状态（API返回前显示 *）
   const [exchangeRates, setExchangeRates] = useState<Array<{ currency: string; name: string; rate: number; changePercent: number }>>([
-    { currency: 'USD', name: '美元', rate: 7.24, changePercent: 0 },
-    { currency: 'EUR', name: '欧元', rate: 7.85, changePercent: 0 },
-    { currency: 'JPY', name: '100日元', rate: 4.82, changePercent: 0 },
+    { currency: 'USD', name: '美元', rate: 0, changePercent: 0 },
+    { currency: 'EUR', name: '欧元', rate: 0, changePercent: 0 },
+    { currency: 'JPY', name: '100日元', rate: 0, changePercent: 0 },
   ]);
 
-  // 加载数据
+  // 加载数据（页面加载时 + 定时刷新）
   useEffect(() => {
+    const REFRESH_INTERVAL = 30000; // 30秒刷新一次
+
     const loadData = async () => {
       try {
         // 并行加载市场、情绪、宏观、汇率数据
@@ -113,12 +109,14 @@ export function DataPage() {
           }));
         }
 
-        // 更新恐惧贪婪
-        setSentimentData(prev => ({
-          ...prev,
-          fearGreed: fearGreed.value,
-          phase: fearGreed.phase,
-        }));
+        // 更新恐惧贪婪（API失败时保持 *）
+        if (fearGreed) {
+          setSentimentData(prev => ({
+            ...prev,
+            fearGreed: fearGreed.value,
+            phase: fearGreed.phase,
+          }));
+        }
 
         // 更新北向趋势 - 使用实际日期
         if (northbound.length > 0) {
@@ -131,29 +129,31 @@ export function DataPage() {
           }));
         }
 
-        // 更新涨跌停
-        setSentimentData(prev => ({
-          ...prev,
-          signals: [
-            { label: '涨停数量', value: limitUp.limitUp, status: limitUp.limitUp < 30 ? '偏冰点' : limitUp.limitUp > 60 ? '偏亢奋' : '正常', variant: 'yellow' as const },
-            { label: '跌停数量', value: limitUp.limitDown, status: '正常', variant: 'green' as const },
-            { label: '北向资金', value: `${northbound[0]?.total >= 0 ? '+' : ''}${(northbound[0]?.total || 0).toFixed(0)}亿`, status: (northbound[0]?.total || 0) >= 0 ? '净买入' : '净卖出', variant: (northbound[0]?.total || 0) >= 0 ? 'green' : 'red' as 'green' | 'red' },
-            { label: '两融余额', value: '1.58万亿', status: '下降', variant: 'yellow' as const },
-          ],
-        }));
+        // 更新涨跌停（API失败时保持 *）
+        if (limitUp) {
+          setSentimentData(prev => ({
+            ...prev,
+            signals: [
+              { label: '涨停数量', value: limitUp.limitUp, status: limitUp.limitUp < 30 ? '偏冰点' : limitUp.limitUp > 60 ? '偏亢奋' : '正常', variant: 'yellow' as const },
+              { label: '跌停数量', value: limitUp.limitDown, status: '正常', variant: 'green' as const },
+              { label: '北向资金', value: `${northbound[0]?.total >= 0 ? '+' : ''}${(northbound[0]?.total || 0).toFixed(0)}亿`, status: (northbound[0]?.total || 0) >= 0 ? '净买入' : '净卖出', variant: (northbound[0]?.total || 0) >= 0 ? 'green' : 'red' as 'green' | 'red' },
+              { label: '两融余额', value: '*', status: '-', variant: 'gray' as const },
+            ],
+          }));
+        }
 
         // 更新宏观指标
         setMacroData(prev => ({
           ...prev,
           indicators: [
-            { name: 'GDP增速', value: `${macro.gdp.toFixed(1)}%`, status: macro.gdp >= 5 ? '稳定' : '放缓', variant: macro.gdp >= 5 ? 'green' as const : 'yellow' as const },
-            { name: 'CPI', value: `${macro.cpi >= 0 ? '+' : ''}${macro.cpi.toFixed(1)}%`, status: macro.cpi < 2 ? '温和' : '偏高', variant: macro.cpi < 2 ? 'blue' as const : 'yellow' as const },
-            { name: 'PMI', value: macro.pmi.toFixed(1), status: macro.pmi >= 50 ? '荣枯线上' : '荣枯线下', variant: macro.pmi >= 50 ? 'green' as const : 'yellow' as const },
+            { name: 'GDP增速', value: `${macro.gdp.toFixed(1)}%`, status: macro.gdp >= 5 ? '稳定' : '放缓', variant: (macro.gdp >= 5 ? 'green' : 'yellow') as 'green' | 'yellow' },
+            { name: 'CPI', value: `${macro.cpi >= 0 ? '+' : ''}${macro.cpi.toFixed(1)}%`, status: macro.cpi < 2 ? '温和' : '偏高', variant: (macro.cpi < 2 ? 'blue' : 'yellow') as 'blue' | 'yellow' },
+            { name: 'PMI', value: macro.pmi.toFixed(1), status: macro.pmi >= 50 ? '荣枯线上' : '荣枯线下', variant: (macro.pmi >= 50 ? 'green' : 'yellow') as 'green' | 'yellow' },
             { name: 'LPR(1年)', value: `${macro.lpr1y.toFixed(2)}%`, status: '不变', variant: 'gray' as const },
           ],
         }));
 
-        // 更新汇率数据
+        // 更新汇率数据（API失败时保持 *）
         if (exchangeRate && exchangeRate.rates && exchangeRate.rates.length > 0) {
           const rateMap: Record<string, { currency: string; name: string; rate: number; changePercent: number }> = {};
           exchangeRate.rates.forEach(r => {
@@ -167,9 +167,9 @@ export function DataPage() {
           });
 
           setExchangeRates([
-            rateMap['USD'] || { currency: 'USD', name: '美元', rate: 7.24, changePercent: 0 },
-            rateMap['EUR'] || { currency: 'EUR', name: '欧元', rate: 7.85, changePercent: 0 },
-            rateMap['JPY'] || { currency: 'JPY', name: '100日元', rate: 4.82, changePercent: 0 },
+            rateMap['USD'] || { currency: 'USD', name: '美元', rate: 0, changePercent: 0 },
+            rateMap['EUR'] || { currency: 'EUR', name: '欧元', rate: 0, changePercent: 0 },
+            rateMap['JPY'] || { currency: 'JPY', name: '100日元', rate: 0, changePercent: 0 },
           ]);
         }
       } catch (error) {
@@ -177,7 +177,14 @@ export function DataPage() {
       }
     };
 
+    // 首次加载
     loadData();
+
+    // 每30秒定时刷新（市场、情绪、汇率数据）
+    const intervalId = setInterval(loadData, REFRESH_INTERVAL);
+
+    // 组件卸载时清除定时器
+    return () => clearInterval(intervalId);
   }, []);
 
   return (

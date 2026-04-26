@@ -1,22 +1,8 @@
 import { useNavigate } from 'react-router-dom';
 import { useState, useEffect } from 'react';
 import { Card, MetricCard, Badge } from '../components';
-import { DataType, UpdateFrequency, getUpdateConfig } from '../services/data';
 import { fetchFearGreedIndex, fetchNorthboundData, fetchLimitUpDown } from '../services/api/marketData';
 import { API_BASE_URL } from '../services/api/apiService';
-
-// 数据更新时间映射
-const getUpdateFrequencyLabel = (type: DataType): string => {
-  const config = getUpdateConfig(type);
-  if (!config) return '未知';
-  switch (config.updateFrequency) {
-    case UpdateFrequency.REALTIME: return '实时';
-    case UpdateFrequency.MINUTE: return '分钟更新';
-    case UpdateFrequency.HOURLY: return '小时更新';
-    case UpdateFrequency.DAILY: return '日更';
-    default: return '未知';
-  }
-};
 
 // 仓位铁律
 const positionRules = [
@@ -63,21 +49,21 @@ async function fetchHotStocks(limit: number = 10): Promise<HotStockItem[]> {
   return [];
 }
 
-// 获取两融余额
-async function fetchMarginBalance(): Promise<number> {
+// 获取两融余额（API失败返回 null）
+async function fetchMarginBalance(): Promise<number | null> {
   try {
     const response = await fetch(`${API_BASE_URL}/api/market/margin-balance`);
     if (response.ok) {
       const data = await response.json();
-      return data.balance || 1.58;
+      return data.balance;
     }
   } catch (error) {
     console.error('获取两融余额失败:', error);
   }
-  return 1.58;
+  return null;  // API 失败返回 null
 }
 
-// 获取快讯
+// 获取快讯（API失败返回空数组）
 async function fetchFastNews(): Promise<NewsItem[]> {
   try {
     // 东方财富快讯API
@@ -85,39 +71,40 @@ async function fetchFastNews(): Promise<NewsItem[]> {
     const response = await fetch(url);
     if (!response.ok) return [];
 
-    // 返回模拟数据作为 fallback
-    return [
-      { id: '1', title: '央行宣布定向降准，释放长期资金约1000亿元', sentiment: 'positive' as const, time: '刚刚' },
-      { id: '2', title: '美股三大指数集体收跌，纳指跌幅超过2%', sentiment: 'negative' as const, time: '1小时前' },
-      { id: '3', title: '多家券商发布年报，业绩分化明显', sentiment: 'neutral' as const, time: '2小时前' },
-    ];
+    const data = await response.json();
+    return data.list || [];
   } catch (error) {
     console.error('获取快讯失败:', error);
-    return [
-      { id: '1', title: '央行宣布定向降准，释放长期资金约1000亿元', sentiment: 'positive' as const, time: '刚刚' },
-      { id: '2', title: '美股三大指数集体收跌，纳指跌幅超过2%', sentiment: 'negative' as const, time: '1小时前' },
-      { id: '3', title: '多家券商发布年报，业绩分化明显', sentiment: 'neutral' as const, time: '2小时前' },
-    ];
+    return [];  // API 失败返回空数组
   }
 }
 
 export function HomePage() {
   const navigate = useNavigate();
 
-  // 实时数据状态
-  const [fearGreed, setFearGreed] = useState({ value: 26, phase: '极度恐惧' });
-  const [northbound, setNorthbound] = useState({ value: 23.5, trend: 'up' as 'up' | 'down' });
+  // 实时数据状态（初始化为 * / 空值）
+  const [fearGreed, setFearGreed] = useState({ value: 0, phase: '-' });
+  const [northbound, setNorthbound] = useState({ value: 0, trend: 'down' as 'up' | 'down' });
   const [marketMetrics, setMarketMetrics] = useState({
-    limitUp: 47,
-    limitDown: 8,
-    marginBalance: 1.58,
+    limitUp: 0,
+    limitDown: 0,
+    marginBalance: null as number | null,
   });
   const [news, setNews] = useState<NewsItem[]>([]);
   const [hotStocks, setHotStocks] = useState<HotStockItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [lastUpdate, setLastUpdate] = useState<Date | null>(null);
 
-  // 加载实时数据
+  // 格式化更新时间
+  const formatLastUpdate = () => {
+    if (!lastUpdate) return '-';
+    return lastUpdate.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+  };
+
+  // 加载实时数据（页面加载时 + 30秒定时刷新）
   useEffect(() => {
+    const REFRESH_INTERVAL = 30000; // 30秒刷新一次
+
     const loadData = async () => {
       try {
         setIsLoading(true);
@@ -129,30 +116,44 @@ export function HomePage() {
           fetchMarginBalance(),
           fetchFastNews(),
         ]);
-        setFearGreed(fg);
-        setNorthbound({
-          value: nb[0]?.total ?? 0,
-          trend: (nb[0]?.total ?? 0) >= 0 ? 'up' : 'down',
-        });
-        setMarketMetrics({
-          limitUp: ld.limitUp,
-          limitDown: ld.limitDown,
-          marginBalance: mb,
-        });
-        setHotStocks(hs);
-        setNews(fn);
+        // API 成功时才更新，失败保持 * 显示
+        if (fg) setFearGreed(fg);
+        if (nb.length > 0) {
+          setNorthbound({
+            value: nb[0]?.total ?? 0,
+            trend: (nb[0]?.total ?? 0) >= 0 ? 'up' : 'down',
+          });
+        }
+        if (ld) {
+          setMarketMetrics({
+            limitUp: ld.limitUp,
+            limitDown: ld.limitDown,
+            marginBalance: mb,
+          });
+        }
+        if (hs.length > 0) setHotStocks(hs);
+        if (fn.length > 0) setNews(fn);
+        setLastUpdate(new Date());
       } catch (error) {
         console.error('加载数据失败:', error);
       } finally {
         setIsLoading(false);
       }
     };
+
+    // 首次加载
     loadData();
+
+    // 每30秒定时刷新
+    const intervalId = setInterval(loadData, REFRESH_INTERVAL);
+
+    // 组件卸载时清除定时器
+    return () => clearInterval(intervalId);
   }, []);
 
-  // 仓位建议计算
+  // 仓位建议计算（数据无效时显示 *）
   const getPositionAdvice = () => {
-    if (fearGreed.value < 30) return { range: '40-60%', phase: '冰点/修复', color: 'green' };
+    if (!fearGreed.value || fearGreed.value < 30) return { range: '*', phase: '-', color: 'gray' };
     if (fearGreed.value < 50) return { range: '30-50%', phase: '分歧', color: 'yellow' };
     if (fearGreed.value < 70) return { range: '20-40%', phase: '乐观', color: 'yellow' };
     return { range: '10-30%', phase: '亢奋', color: 'red' };
@@ -180,7 +181,7 @@ export function HomePage() {
             <span className="text-sm text-gray-300">{isLoading ? '数据加载中...' : '数据已更新'}</span>
           </div>
           <div className="text-xs text-gray-500">
-            恐惧贪婪 {getUpdateFrequencyLabel(DataType.FEAR_GREED)} · 北向资金 {getUpdateFrequencyLabel(DataType.NORTHBOUND)}
+            {lastUpdate ? `上次更新: ${formatLastUpdate()}` : '每30秒自动刷新'}
           </div>
         </div>
       </Card>
@@ -270,7 +271,7 @@ export function HomePage() {
           />
           <MetricCard
             label="两融余额"
-            value={`${marketMetrics.marginBalance.toFixed(2)}万亿`}
+            value={marketMetrics.marginBalance ? `${marketMetrics.marginBalance.toFixed(2)}万亿` : '*'}
             trend="down"
             icon="💰"
             onClick={() => navigate('/data')}

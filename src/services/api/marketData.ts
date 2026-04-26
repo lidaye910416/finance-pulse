@@ -7,7 +7,7 @@
 import type { Quote, KLine, NorthboundData } from '../data/types';
 
 // 后端 API 基础 URL
-const API_BASE_URL = 'http://localhost:8080';
+const API_BASE_URL = 'http://localhost:5003';
 
 // 东方财富 API 基础 URL（用于股票行情和K线）
 const EAST_MONEY_BASE = 'https://push2.eastmoney.com';
@@ -59,41 +59,42 @@ export async function fetchStockQuote(code: string): Promise<Quote | null> {
 
 /**
  * 获取多个股票实时行情
+ * 使用后端 API 获取，避免跨域问题
  */
 export async function fetchMultipleQuotes(codes: string[]): Promise<Quote[]> {
   const quotes: Quote[] = [];
-  
-  // 东方财富支持批量查询
-  const secids = codes.map(formatStockCode).join(',');
-  const url = `${EAST_MONEY_BASE}/api/qt/ulist.np/get?secids=${secids}&fields=f1,f2,f3,f4,f5,f6,f7,f8,f12,f14,f15,f16,f17,f18,f20,f21,f23,f24,f25,f22,f11,f62,f128,f136,f115,f152`;
 
-  try {
-    const response = await fetch(url);
-    if (!response.ok) return [];
-
-    const data = await response.json();
-    const list = data.data?.diff || [];
-
-    for (const item of list) {
-      if (item.f12) {
-        quotes.push({
-          code: String(item.f12),
-          name: item.f14 || `股票${item.f12}`,
-          price: item.f2 || 0,
-          change: item.f3 || 0,
-          changePercent: item.f3 || 0,
-          volume: item.f5 || 0,
-          amount: item.f6 || 0,
-          high: item.f15 || 0,
-          low: item.f16 || 0,
-          open: item.f17 || 0,
-          prevClose: item.f18 || 0,
-          timestamp: Date.now(),
-        });
+  // 通过后端 API 获取每个股票行情
+  const responses = await Promise.all(
+    codes.map(async (code) => {
+      try {
+        const response = await fetch(`${API_BASE_URL}/quote/${code}`);
+        if (response.ok) {
+          const data = await response.json();
+          return {
+            code: data.code,
+            name: data.name,
+            price: data.price,
+            change: data.change,
+            changePercent: data.change_percent,
+            volume: data.volume,
+            amount: data.amount,
+            high: data.high,
+            low: data.low,
+            open: data.open,
+            prevClose: data.prev_close,
+            timestamp: Date.now(),
+          };
+        }
+      } catch (error) {
+        console.error(`获取 ${code} 行情失败:`, error);
       }
-    }
-  } catch (error) {
-    console.error('批量获取股票行情失败:', error);
+      return null;
+    })
+  );
+
+  for (const quote of responses) {
+    if (quote) quotes.push(quote);
   }
 
   return quotes;
@@ -161,7 +162,7 @@ export async function fetchNorthboundData(days: number = 7): Promise<NorthboundD
 /**
  * 获取恐惧贪婪指数
  */
-export async function fetchFearGreedIndex(): Promise<{ value: number; phase: string }> {
+export async function fetchFearGreedIndex(): Promise<{ value: number; phase: string } | null> {
   try {
     // 调用后端 API
     const response = await fetch(`${API_BASE_URL}/api/market/fear-greed`);
@@ -173,14 +174,14 @@ export async function fetchFearGreedIndex(): Promise<{ value: number; phase: str
     console.error('获取恐惧贪婪指数失败:', error);
   }
 
-  // Fallback - 与后端保持一致
-  return { value: 26, phase: '极度恐惧' };
+  // API 失败返回 null，前端显示 *
+  return null;
 }
 
 /**
  * 获取涨跌停统计
  */
-export async function fetchLimitUpDown(): Promise<{ limitUp: number; limitDown: number }> {
+export async function fetchLimitUpDown(): Promise<{ limitUp: number; limitDown: number } | null> {
   try {
     // 调用后端 API
     const response = await fetch(`${API_BASE_URL}/api/market/limit-up-down`);
@@ -192,6 +193,6 @@ export async function fetchLimitUpDown(): Promise<{ limitUp: number; limitDown: 
     console.error('获取涨跌停统计失败:', error);
   }
 
-  // Fallback
-  return { limitUp: 47, limitDown: 8 };
+  // API 失败返回 null，前端显示 *
+  return null;
 }

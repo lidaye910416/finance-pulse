@@ -17,9 +17,9 @@ function useSentimentData() {
         fetchLimitUpDown(),
         fetchNorthboundData(7),
       ]);
-      setFearGreed(fg);
-      setLimitUpDown(lud);
-      setNorthboundData(nb);
+      if (fg) setFearGreed(fg);
+      if (lud) setLimitUpDown(lud);
+      if (nb.length > 0) setNorthboundData(nb);
     } catch (e) {
       console.error('加载数据失败:', e);
     } finally {

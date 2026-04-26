@@ -122,8 +122,8 @@ function useMarketData() {
           fetchFearGreedIndex(),
           fetchLimitUpDown(),
         ]);
-        setFearGreed(fg);
-        setLimitUpDown(lud);
+        if (fg) setFearGreed(fg);
+        if (lud) setLimitUpDown(lud);
       } catch (e) {
         console.error('加载市场数据失败:', e);
       } finally {
