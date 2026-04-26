@@ -32,7 +32,7 @@
         "Python 语法检查通过"
       ],
       "priority": 2,
-      "passes": false,
+      "passes": true,
       "notes": "基于 ben_graham.py 参考实现"
     },
     {
@@ -47,7 +47,7 @@
         "Python 语法检查通过"
       ],
       "priority": 2,
-      "passes": false,
+      "passes": true,
       "notes": "基于 charlie_munger.py 参考实现"
     },
     {
@@ -62,7 +62,7 @@
         "Python 语法检查通过"
       ],
       "priority": 2,
-      "passes": false,
+      "passes": true,
       "notes": "基于 peter_lynch.py 参考实现"
     },
     {
@@ -77,7 +77,7 @@
         "Python 语法检查通过"
       ],
       "priority": 2,
-      "passes": false,
+      "passes": true,
       "notes": "基于 cathie_wood.py 参考实现"
     },
     {

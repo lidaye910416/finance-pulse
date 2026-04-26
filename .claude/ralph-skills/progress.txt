@@ -163,3 +163,54 @@
 - Gotcha: Use `_safe_float()` helper to handle None/NaN values from pandas
 - Pattern: Mock data for specific stocks (600519, 000858, 300750) provides realistic base values
 - Reference: ai-hedge-fund/src/tools/api.py uses similar pattern with cache + API fallback
+
+
+## 2026-04-26 16:30 - US-015
+- Created ben_graham.py with BenGrahamLeader class
+- Implemented five-dimension analysis: liquidation value, intrinsic value, margin of safety, financial health, risk/reward
+- Graham Number calculation using sqrt(22.5 × EPS × BVPS)
+- NCAV (Net Current Asset Value) analysis
+- Added create_ben_graham_leader() and run_ben_graham_analysis() functions
+
+**Files changed:**
+- server/agents/leaders/ben_graham.py (new)
+
+---
+
+## 2026-04-26 16:35 - US-016
+- Created charlie_munger.py with CharlieMungerLeader class
+- Implemented five-dimension analysis: psychology insight, economic advantage, biological adaptation, reverse analysis, wonderful business
+- Multi-disciplinary thinking approach
+- Added create_charlie_munger_leader() and run_charlie_munger_analysis() functions
+
+**Files changed:**
+- server/agents/leaders/charlie_munger.py (new)
+
+---
+
+## 2026-04-26 16:40 - US-017
+- Created peter_lynch.py with PeterLynchLeader class
+- Implemented five-dimension analysis: company type, growth potential, industry outlook, GARP valuation, management quality
+- PEG ratio analysis and ten-bagger potential evaluation
+- Added create_peter_lynch_leader() and run_peter_lynch_analysis() functions
+
+**Files changed:**
+- server/agents/leaders/peter_lynch.py (new)
+
+---
+
+## 2026-04-26 16:45 - US-018
+- Created cathie_wood.py with CathieWoodLeader class
+- Implemented five-dimension analysis: disruptive potential, innovation growth, high-growth valuation, TAM analysis, management vision
+- Focus on breakthrough tech and exponential growth
+- Added create_cathie_wood_leader() and run_cathie_wood_analysis() functions
+
+**Files changed:**
+- server/agents/leaders/cathie_wood.py (new)
+
+**Learnings for future iterations:**
+- Pattern: All leaders follow same structure with _build_*_prompt, _parse_*_response, analyze methods
+- Pattern: Use TYPE_CHECKING for imports to avoid runtime issues with Python 3.9
+- Gotcha: Strings with Chinese quotes need escaping in Python source files
+- Pattern: Each leader exports create_*_leader() factory and run_*_analysis() convenience function
+- Reference: ai-hedge-fund/src/agents/ben_graham.py has detailed quantitative analysis we can use later
