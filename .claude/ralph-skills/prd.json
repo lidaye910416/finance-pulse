@@ -1,173 +1,79 @@
 {
   "project": "FinancePulse",
   "branchName": "ralph/multi-agent-stock-analysis",
-  "description": "弥合算法差距 - 实现 DataService, 18位 Leaders, Analyst Agents, Risk Manager 集成",
+  "description": "修复前后端适配性问题 - API参数、工作流路由、端点对接",
   "userStories": [
     {
-      "id": "US-014",
-      "title": "实现 DataService 数据服务层",
-      "description": "封装 AKShare 获取真实股票数据",
+      "id": "US-026",
+      "title": "更新后端 AnalysisRequest 模型",
+      "description": "添加 mode, leader_id, risk_level 参数",
       "acceptanceCriteria": [
-        "创建 server/services/data_service.py",
-        "实现 get_stock_data(code) 获取行情",
-        "实现 get_financial_metrics(code, period, limit) 获取财务指标",
-        "实现 search_line_items(code, items, limit) 获取财务明细",
-        "实现 get_market_cap(code, date) 获取市值",
-        "实现 get_price_history(code, days) 获取历史价格",
+        "AnalysisRequest 添加 mode: 'tradingagents' | 'aihedgefund' | 'fusion'",
+        "AnalysisRequest 添加 leader_id?: string",
+        "AnalysisRequest 添加 risk_level?: 'conservative' | 'moderate' | 'aggressive'",
+        "AnalysisRequest 添加 convergence_gap?: number",
+        "AnalysisRequest 添加 early_stop_gap?: number",
         "Python 语法检查通过"
       ],
       "priority": 1,
-      "passes": true,
-      "notes": "基于 ai-hedge-fund/src/tools/api.py 的数据获取模式"
+      "passes": false,
+      "notes": "修改 server/main.py"
     },
     {
-      "id": "US-015",
-      "title": "实现 Ben Graham Leader",
-      "description": "实现格雷厄姆价值投资大师",
+      "id": "US-027",
+      "title": "实现工作流路由逻辑",
+      "description": "根据 mode 参数选择不同工作流",
       "acceptanceCriteria": [
-        "创建 server/agents/leaders/ben_graham.py",
-        "实现安全边际计算",
-        "实现低估筛选逻辑",
-        "导出 create_ben_graham_leader()",
+        "TradingAgents 模式使用 tradingagents_workflow (8阶段)",
+        "AIHedgeFund 模式使用 aihedgefund_workflow (4层)",
+        "Fusion 模式使用 fusion_workflow (Leader决策)",
         "Python 语法检查通过"
       ],
-      "priority": 2,
-      "passes": true,
-      "notes": "基于 ben_graham.py 参考实现"
+      "priority": 1,
+      "passes": false,
+      "notes": "修改 server/main.py analyze 端点"
     },
     {
-      "id": "US-016",
-      "title": "实现 Charlie Munger Leader",
-      "description": "实现芒格多元思维大师",
+      "id": "US-028",
+      "title": "添加 /api/leaders 端点",
+      "description": "返回19位投资大师列表",
       "acceptanceCriteria": [
-        "创建 server/agents/leaders/charlie_munger.py",
-        "实现心理模型分析",
-        "实现多元思维框架",
-        "导出 create_charlie_munger_leader()",
+        "实现 GET /api/leaders 端点",
+        "返回 LEADERS 配置中的19位大师",
+        "格式: { leaders: [{id, name, style, avatar, description}] }",
         "Python 语法检查通过"
       ],
-      "priority": 2,
-      "passes": true,
-      "notes": "基于 charlie_munger.py 参考实现"
+      "priority": 1,
+      "passes": false,
+      "notes": "修改 server/main.py，导入 config.leaders"
     },
     {
-      "id": "US-017",
-      "title": "实现 Peter Lynch Leader",
-      "description": "实现林奇成长投资大师",
+      "id": "US-029",
+      "title": "修复前端 getLeaders fallback",
+      "description": "当后端不可用时使用本地 fallback",
       "acceptanceCriteria": [
-        "创建 server/agents/leaders/peter_lynch.py",
-        "实现十倍股识别逻辑",
-        "实现成长股筛选标准",
-        "导出 create_peter_lynch_leader()",
-        "Python 语法检查通过"
+        "getLeaders() 在 404 时使用本地 leaders 数组",
+        "确保 AnalysisParams 能正常显示大师选择",
+        "Typecheck passes"
       ],
       "priority": 2,
-      "passes": true,
-      "notes": "基于 peter_lynch.py 参考实现"
+      "passes": false,
+      "notes": "修改 src/services/api/apiService.ts"
     },
     {
-      "id": "US-018",
-      "title": "实现 Cathie Wood Leader",
-      "description": "实现伍德颠覆性创新大师",
+      "id": "US-030",
+      "title": "验证完整流程",
+      "description": "验证前端参数正确传递到后端并使用对应工作流",
       "acceptanceCriteria": [
-        "创建 server/agents/leaders/cathie_wood.py",
-        "实现未来趋势分析",
-        "实现创新赛道评估",
-        "导出 create_cathie_wood_leader()",
-        "Python 语法检查通过"
-      ],
-      "priority": 2,
-      "passes": true,
-      "notes": "基于 cathie_wood.py 参考实现"
-    },
-    {
-      "id": "US-019",
-      "title": "实现剩余14位 Leaders",
-      "description": "批量实现剩余14位投资大师",
-      "acceptanceCriteria": [
-        "创建剩余14位 leaders: bill_ackman, stanley_druckenmiller, aswath_damodaran, mohnish_pabrai, phil_fisher, rakesh_jhunjhunwala, george_soros, ray_dalio, paul_tudor_jones, jim_simons, ed_thorp, john_bogle, howard_marks, seth_klarman",
-        "每位移除独立 system_prompt",
+        "前端设置 mode=tradingagents → 后端使用 tradingagents_workflow",
+        "前端设置 mode=aihedgefund → 后端使用 aihedgefund_workflow",
+        "前端设置 mode=fusion → 后端使用 fusion_workflow",
+        "前端选择 leader → 后端使用对应 leader",
         "Python 语法检查通过"
       ],
       "priority": 3,
       "passes": false,
-      "notes": "可参考 ai-hedge-fund/src/agents/ 下的对应文件"
-    },
-    {
-      "id": "US-020",
-      "title": "实现 Technical Analyst Agent",
-      "description": "实现技术分析师",
-      "acceptanceCriteria": [
-        "创建 server/agents/analysts/technicals.py",
-        "实现均线分析 (MA5/MA10/MA20/MA60)",
-        "实现 MACD 分析",
-        "实现 KDJ 分析",
-        "实现布林带分析",
-        "导出 run_technical_analyst(state, llm_service)",
-        "Python 语法检查通过"
-      ],
-      "priority": 3,
-      "passes": true,
-      "notes": "基于 ai-hedge-fund/src/agents/technicals.py"
-    },
-    {
-      "id": "US-021",
-      "title": "实现 Sentiment Analyst Agent",
-      "description": "实现情绪分析师",
-      "acceptanceCriteria": [
-        "创建 server/agents/analysts/sentiment.py",
-        "实现市场情绪评分",
-        "实现资金流向分析",
-        "导出 run_sentiment_analyst(state, llm_service)",
-        "Python 语法检查通过"
-      ],
-      "priority": 3,
-      "passes": true,
-      "notes": "基于 ai-hedge-fund/src/agents/sentiment.py"
-    },
-    {
-      "id": "US-022",
-      "title": "实现 Valuation Analyst Agent",
-      "description": "实现估值分析师",
-      "acceptanceCriteria": [
-        "创建 server/agents/analysts/valuation.py",
-        "实现 DCF 估值模型",
-        "实现 PE/PB 相对估值",
-        "导出 run_valuation_analyst(state, llm_service)",
-        "Python 语法检查通过"
-      ],
-      "priority": 3,
-      "passes": true,
-      "notes": "基于 ai-hedge-fund/src/agents/valuation.py"
-    },
-    {
-      "id": "US-023",
-      "title": "集成 Risk Manager 到工作流",
-      "description": "将 Risk Manager 集成到 aihedgefund_workflow",
-      "acceptanceCriteria": [
-        "在 Layer 3 调用 Risk Manager",
-        "传入波动率计算所需的价格数据",
-        "输出波动率调整后的仓位限制",
-        "集成 risk_manager.py 的量化计算",
-        "Python 语法检查通过"
-      ],
-      "priority": 4,
-      "passes": false,
-      "notes": "确保 risk_manager.py 的 calculate_volatility_metrics 被调用"
-    },
-    {
-      "id": "US-024",
-      "title": "实现 Leader 风格映射",
-      "description": "实现 leader → analyst 类型映射",
-      "acceptanceCriteria": [
-        "创建 config/leaders.py",
-        "定义 STYLE_ANALYST_MAP 映射",
-        "实现 get_analysts_for_style(style) 函数",
-        "Python 语法检查通过"
-      ],
-      "priority": 4,
-      "passes": false,
-      "notes": "基于 ai-hedge-fund/src/config/analysts.py"
+      "notes": "验证完成后更新 progress.txt"
     }
   ]
 }
