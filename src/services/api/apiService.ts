@@ -4,7 +4,7 @@
 
 // ========== API 配置 ==========
 
-const API_BASE_URL = 'http://localhost:5000';
+export const API_BASE_URL = 'http://localhost:5000';
 
 // ========== API 响应类型 ==========
 

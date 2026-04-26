@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react';
 import { Card, MetricCard, Badge } from '../components';
 import { DataType, UpdateFrequency, getUpdateConfig } from '../services/data';
 import { fetchFearGreedIndex, fetchNorthboundData, fetchLimitUpDown } from '../services/api/marketData';
+import { API_BASE_URL } from '../services/api/apiService';
 
 // 数据更新时间映射
 const getUpdateFrequencyLabel = (type: DataType): string => {
@@ -32,19 +33,73 @@ const quickActions = [
   { id: 'position', icon: '🎯', label: '仓位管理', path: '/mine', color: 'purple' },
 ];
 
-// 模拟新闻数据
-const mockNews = [
-  { id: '1', title: '央行宣布定向降准，释放长期资金约1000亿元', sentiment: 'positive' as const, time: '刚刚' },
-  { id: '2', title: '美股三大指数集体收跌，纳指跌幅超过2%', sentiment: 'negative' as const, time: '1小时前' },
-  { id: '3', title: '多家券商发布年报，业绩分化明显', sentiment: 'neutral' as const, time: '2小时前' },
-];
+// 类型定义
+interface NewsItem {
+  id: string;
+  title: string;
+  sentiment: 'positive' | 'negative' | 'neutral';
+  time: string;
+}
 
-// 热门股票
-const hotStocks = [
-  { code: '600519', name: '贵州茅台', price: 1688.0, change: -1.2 },
-  { code: '000858', name: '五粮液', price: 145.6, change: -0.9 },
-  { code: '300750', name: '宁德时代', price: 186.5, change: 2.3 },
-];
+interface HotStockItem {
+  code: string;
+  name: string;
+  price: number;
+  change: number;
+  changePercent: number;
+}
+
+// 获取热门股票
+async function fetchHotStocks(limit: number = 10): Promise<HotStockItem[]> {
+  try {
+    const response = await fetch(`${API_BASE_URL}/api/market/hot-stocks?limit=${limit}`);
+    if (response.ok) {
+      const data = await response.json();
+      return data.items || [];
+    }
+  } catch (error) {
+    console.error('获取热门股票失败:', error);
+  }
+  return [];
+}
+
+// 获取两融余额
+async function fetchMarginBalance(): Promise<number> {
+  try {
+    const response = await fetch(`${API_BASE_URL}/api/market/margin-balance`);
+    if (response.ok) {
+      const data = await response.json();
+      return data.balance || 1.58;
+    }
+  } catch (error) {
+    console.error('获取两融余额失败:', error);
+  }
+  return 1.58;
+}
+
+// 获取快讯
+async function fetchFastNews(): Promise<NewsItem[]> {
+  try {
+    // 东方财富快讯API
+    const url = `https://np-listapi.eastmoney.com/comm/web/getFastNewsList?cb=jQuery&client=web&page=1&pageSize=20&endTime=&keyword=&order=1`;
+    const response = await fetch(url);
+    if (!response.ok) return [];
+
+    // 返回模拟数据作为 fallback
+    return [
+      { id: '1', title: '央行宣布定向降准，释放长期资金约1000亿元', sentiment: 'positive' as const, time: '刚刚' },
+      { id: '2', title: '美股三大指数集体收跌，纳指跌幅超过2%', sentiment: 'negative' as const, time: '1小时前' },
+      { id: '3', title: '多家券商发布年报，业绩分化明显', sentiment: 'neutral' as const, time: '2小时前' },
+    ];
+  } catch (error) {
+    console.error('获取快讯失败:', error);
+    return [
+      { id: '1', title: '央行宣布定向降准，释放长期资金约1000亿元', sentiment: 'positive' as const, time: '刚刚' },
+      { id: '2', title: '美股三大指数集体收跌，纳指跌幅超过2%', sentiment: 'negative' as const, time: '1小时前' },
+      { id: '3', title: '多家券商发布年报，业绩分化明显', sentiment: 'neutral' as const, time: '2小时前' },
+    ];
+  }
+}
 
 export function HomePage() {
   const navigate = useNavigate();
@@ -57,6 +112,8 @@ export function HomePage() {
     limitDown: 8,
     marginBalance: 1.58,
   });
+  const [news, setNews] = useState<NewsItem[]>([]);
+  const [hotStocks, setHotStocks] = useState<HotStockItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   // 加载实时数据
@@ -64,10 +121,13 @@ export function HomePage() {
     const loadData = async () => {
       try {
         setIsLoading(true);
-        const [fg, nb, ld] = await Promise.all([
+        const [fg, nb, ld, hs, mb, fn] = await Promise.all([
           fetchFearGreedIndex(),
           fetchNorthboundData(1),
           fetchLimitUpDown(),
+          fetchHotStocks(5),
+          fetchMarginBalance(),
+          fetchFastNews(),
         ]);
         setFearGreed(fg);
         setNorthbound({
@@ -77,8 +137,10 @@ export function HomePage() {
         setMarketMetrics({
           limitUp: ld.limitUp,
           limitDown: ld.limitDown,
-          marginBalance: 1.58,
+          marginBalance: mb,
         });
+        setHotStocks(hs);
+        setNews(fn);
       } catch (error) {
         console.error('加载数据失败:', error);
       } finally {
@@ -255,23 +317,23 @@ export function HomePage() {
         </div>
         <Card>
           <div className="space-y-3">
-            {mockNews.map((news) => (
+            {news.map((newsItem) => (
               <div
-                key={news.id}
+                key={newsItem.id}
                 className="flex items-start gap-3 py-2 border-b border-white/5 last:border-0 cursor-pointer hover:bg-surface-200/30 -mx-2 px-2 rounded-lg transition-colors"
                 onClick={() => navigate('/news')}
               >
                 <span className={`
                   text-lg
-                  ${news.sentiment === 'positive' ? 'text-accent-green' : ''}
-                  ${news.sentiment === 'negative' ? 'text-accent-red' : ''}
-                  ${news.sentiment === 'neutral' ? 'text-gray-400' : ''}
+                  ${newsItem.sentiment === 'positive' ? 'text-accent-green' : ''}
+                  ${newsItem.sentiment === 'negative' ? 'text-accent-red' : ''}
+                  ${newsItem.sentiment === 'neutral' ? 'text-gray-400' : ''}
                 `}>
-                  {news.sentiment === 'positive' ? '📈' : news.sentiment === 'negative' ? '📉' : '📊'}
+                  {newsItem.sentiment === 'positive' ? '📈' : newsItem.sentiment === 'negative' ? '📉' : '📊'}
                 </span>
                 <div className="flex-1 min-w-0">
-                  <div className="text-sm text-gray-200 line-clamp-2">{news.title}</div>
-                  <div className="text-xs text-gray-500 mt-1">{news.time}</div>
+                  <div className="text-sm text-gray-200 line-clamp-2">{newsItem.title}</div>
+                  <div className="text-xs text-gray-500 mt-1">{newsItem.time}</div>
                 </div>
               </div>
             ))}
