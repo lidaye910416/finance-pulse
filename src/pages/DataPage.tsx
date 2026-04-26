@@ -11,15 +11,15 @@ const tabs = [
   { id: 'sentiment', label: '情绪', icon: '😰' },
 ];
 
-// 模拟宏观数据（待接入国家统计局API）
-const mockMacroIndicators = [
+// 宏观数据fallback（API不可用时使用）
+const fallbackMacroIndicators = [
   { name: 'GDP增速', value: '5.0%', status: '稳定', variant: 'green' as const },
   { name: 'CPI', value: '+1.1%', status: '温和', variant: 'blue' as const },
   { name: 'PMI', value: '49.2', status: '荣枯线下', variant: 'yellow' as const },
   { name: 'LPR(1年)', value: '3.45%', status: '不变', variant: 'gray' as const },
 ];
 
-// 模拟GDP趋势数据
+// GDP趋势数据（后端暂无历史接口，暂时保留）
 const mockGdpTrend = [
   { year: '2023', value: 5.2 },
   { year: '2024', value: 5.0 },
@@ -27,7 +27,7 @@ const mockGdpTrend = [
   { year: '2025-Q2', value: 5.3 },
 ];
 
-// 模拟CPI趋势数据
+// CPI趋势数据（后端暂无历史接口，暂时保留）
 const mockCpiTrend = [
   { month: '1月', value: 0.5 },
   { month: '2月', value: 0.7 },
@@ -74,7 +74,7 @@ export function DataPage() {
 
   // 宏观数据状态
   const [macroData, setMacroData] = useState({
-    indicators: mockMacroIndicators,
+    indicators: fallbackMacroIndicators,
     gdp: mockGdpTrend,
     cpi: mockCpiTrend,
   });

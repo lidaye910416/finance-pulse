@@ -1,31 +1,47 @@
 /**
  * 宏观数据 API 服务
- * 
- * 从国家统计局、央行等获取宏观数据
+ *
+ * 调用后端 FinancePulse API 获取宏观数据
  */
 
 import type { MacroIndicator } from '../data/types';
+
+// 后端 API 基础 URL
+const API_BASE_URL = 'http://localhost:5000';
 
 /**
  * 获取GDP数据
  */
 export async function fetchGDPData(): Promise<MacroIndicator | null> {
   try {
-    // 模拟数据 - 实际应调用国家统计局API
-    // https://data.stats.gov.cn/easyquery.htm?cn=A01
-    return {
-      type: 'gdp',
-      date: new Date().toISOString().slice(0, 7),
-      value: 5.0,
-      yoy: 5.0,
-      unit: '%',
-      source: '国家统计局',
-      releaseTime: '每季度结束后15日左右',
-    };
+    // 调用后端 API
+    const response = await fetch(`${API_BASE_URL}/api/macro/gdp`);
+    if (response.ok) {
+      const data = await response.json();
+      return {
+        type: 'gdp',
+        date: `${data.year}-${data.quarter}`,
+        value: data.current,
+        yoy: data.current,
+        unit: '%',
+        source: '东方财富',
+        releaseTime: data.updateTime,
+      };
+    }
   } catch (error) {
     console.error('获取GDP数据失败:', error);
-    return null;
   }
+
+  // Fallback
+  return {
+    type: 'gdp',
+    date: new Date().toISOString().slice(0, 7),
+    value: 5.0,
+    yoy: 5.0,
+    unit: '%',
+    source: '国家统计局',
+    releaseTime: '每季度结束后15日左右',
+  };
 }
 
 /**
@@ -33,21 +49,36 @@ export async function fetchGDPData(): Promise<MacroIndicator | null> {
  */
 export async function fetchCPIData(): Promise<MacroIndicator | null> {
   try {
-    // 模拟数据 - 实际应调用国家统计局API
-    return {
-      type: 'cpi',
-      date: new Date().toISOString().slice(0, 7),
-      value: 1.1,
-      yoy: 1.1,
-      mom: 0.2,
-      unit: '%',
-      source: '国家统计局',
-      releaseTime: '每月9日左右',
-    };
+    // 调用后端 API
+    const response = await fetch(`${API_BASE_URL}/api/macro/cpi`);
+    if (response.ok) {
+      const data = await response.json();
+      return {
+        type: 'cpi',
+        date: `${data.year}-${String(data.month).padStart(2, '0')}`,
+        value: data.yoy,
+        yoy: data.yoy,
+        mom: data.mom,
+        unit: '%',
+        source: '东方财富',
+        releaseTime: data.updateTime,
+      };
+    }
   } catch (error) {
     console.error('获取CPI数据失败:', error);
-    return null;
   }
+
+  // Fallback
+  return {
+    type: 'cpi',
+    date: new Date().toISOString().slice(0, 7),
+    value: 1.1,
+    yoy: 1.1,
+    mom: 0.2,
+    unit: '%',
+    source: '国家统计局',
+    releaseTime: '每月9日左右',
+  };
 }
 
 /**
@@ -55,20 +86,34 @@ export async function fetchCPIData(): Promise<MacroIndicator | null> {
  */
 export async function fetchPMIData(): Promise<MacroIndicator | null> {
   try {
-    // 模拟数据 - 实际应调用国家统计局API
-    return {
-      type: 'pmi',
-      date: new Date().toISOString().slice(0, 7),
-      value: 49.2,
-      yoy: -0.8,
-      unit: '',
-      source: '国家统计局',
-      releaseTime: '每月最后一天',
-    };
+    // 调用后端 API
+    const response = await fetch(`${API_BASE_URL}/api/macro/pmi`);
+    if (response.ok) {
+      const data = await response.json();
+      return {
+        type: 'pmi',
+        date: data.date,
+        value: data.manufacturing, // 使用制造业PMI作为主值
+        yoy: 0, // PMI 不提供同比数据
+        unit: '',
+        source: '东方财富',
+        releaseTime: data.updateTime,
+      };
+    }
   } catch (error) {
     console.error('获取PMI数据失败:', error);
-    return null;
   }
+
+  // Fallback
+  return {
+    type: 'pmi',
+    date: new Date().toISOString().slice(0, 7),
+    value: 49.2,
+    yoy: -0.8,
+    unit: '',
+    source: '国家统计局',
+    releaseTime: '每月最后一天',
+  };
 }
 
 /**
@@ -76,16 +121,21 @@ export async function fetchPMIData(): Promise<MacroIndicator | null> {
  */
 export async function fetchLPRData(): Promise<{ oneYear: number; fiveYear: number }> {
   try {
-    // 模拟数据 - 实际应调用央行API
-    // https://www.pbc.gov.cn/zhengcehuobisi/125207/125213/125440/125497/index.html
-    return {
-      oneYear: 3.45,
-      fiveYear: 4.20,
-    };
+    // 调用后端 API
+    const response = await fetch(`${API_BASE_URL}/api/macro/lpr`);
+    if (response.ok) {
+      const data = await response.json();
+      return {
+        oneYear: data.oneYear,
+        fiveYear: data.fiveYear,
+      };
+    }
   } catch (error) {
     console.error('获取LPR数据失败:', error);
-    return { oneYear: 3.45, fiveYear: 4.20 };
   }
+
+  // Fallback
+  return { oneYear: 3.45, fiveYear: 4.20 };
 }
 
 /**
@@ -140,6 +190,26 @@ export interface MacroData {
  * 获取所有宏观数据
  */
 export async function fetchAllMacroData(): Promise<MacroData> {
+  try {
+    // 调用后端聚合 API
+    const response = await fetch(`${API_BASE_URL}/api/macro`);
+    if (response.ok) {
+      const data = await response.json();
+      return {
+        gdp: data.gdp?.current ?? 5.0,
+        cpi: data.cpi?.yoy ?? 2.0,
+        pmi: data.pmi?.manufacturing ?? 50,
+        lpr1y: data.lpr?.oneYear ?? 3.45,
+        lpr5y: data.lpr?.fiveYear ?? 3.95,
+        m2: 313.52, // 货币供应量暂时保留本地获取
+        m2Yoy: 7.0,
+      };
+    }
+  } catch (error) {
+    console.error('获取宏观数据失败:', error);
+  }
+
+  // Fallback - 如果后端不可用，使用本地并行请求
   const [gdp, cpi, pmi, lpr, moneySupply] = await Promise.all([
     fetchGDPData(),
     fetchCPIData(),
