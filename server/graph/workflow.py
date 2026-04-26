@@ -58,6 +58,7 @@ from agents.analyst import run_analysts_parallel
 from agents.debate import run_debate_round
 from agents.synthesizer import synthesize_results
 from agents.decision import make_decision
+from agents.tradingagents.risk_debate import run_risk_debate
 from services.llm import LLMService
 
 
@@ -94,14 +95,20 @@ def create_workflow(llm_service: LLMService) -> StateGraph:
         "debate",
         lambda state: run_debate_round(state, llm_service)
     )
-    
-    # 4. 综合分析节点
+
+    # 4. 风险辩论节点 (Stage 7)
+    workflow.add_node(
+        "risk_debate",
+        lambda state: run_risk_debate(state, llm_service)
+    )
+
+    # 5. 综合分析节点
     workflow.add_node(
         "synthesize",
         lambda state: synthesize_results(state, llm_service)
     )
     
-    # 5. 决策节点
+    # 6. 决策节点
     workflow.add_node(
         "decision",
         lambda state: make_decision(state, llm_service)
@@ -115,16 +122,19 @@ def create_workflow(llm_service: LLMService) -> StateGraph:
     # 主工作流
     workflow.add_edge("collect_data", "run_analysts")
     workflow.add_edge("run_analysts", "debate")
-    
-    # 条件路由：辩论后决定是继续辩论还是进入综合
+
+    # 条件路由：辩论后决定是继续辩论还是进入风险辩论
     workflow.add_conditional_edges(
         "debate",
         should_continue,
         {
-            "debate": "debate",      # 继续辩论（循环）
-            "synthesize": "synthesize",  # 进入综合分析
+            "debate": "debate",          # 继续辩论（循环）
+            "synthesize": "risk_debate", # 进入风险辩论
         }
     )
+
+    # 风险辩论后进入综合分析
+    workflow.add_edge("risk_debate", "synthesize")
     
     # 完成综合后进入决策
     workflow.add_edge("synthesize", "decision")
