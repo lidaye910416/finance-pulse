@@ -2,6 +2,29 @@ import { useState, useEffect } from 'react';
 import { Card } from '../Card';
 import { apiService, ApiLeader, ApiConvergencePreset, ApiRiskPreference } from '../../services/api/apiService';
 
+// 默认领袖列表（后端不可用时使用）
+const DEFAULT_LEADERS: ApiLeader[] = [
+  { id: 'warren_buffett', name: '沃伦·巴菲特', style: '价值投资大师', avatar: '🎯', description: '寻找伟大的公司，以合理的价格买入' },
+  { id: 'ben_graham', name: '本杰明·格雷厄姆', style: '安全边际专家', avatar: '🛡️', description: '强调"安全边际"是投资的核心' },
+  { id: 'peter_lynch', name: '彼得·林奇', style: '成长投资专家', avatar: '📈', description: '在日常生活中寻找10倍股' },
+  { id: 'charlie_munger', name: '查理·芒格', style: '多元思维模型专家', avatar: '🧠', description: '跨学科分析，逆向思考' },
+  { id: 'cathie_wood', name: '凯瑟琳·伍德', style: '颠覆性创新专家', avatar: '🚀', description: '专注未来趋势和颠覆性创新' },
+  { id: 'bill_ackman', name: '比尔·阿克曼', style: '积极主义投资者', avatar: '🎯', description: 'Pershing Square创始人' },
+  { id: 'stanley_druckenmiller', name: '斯坦利·德鲁肯米勒', style: '宏观对冲大师', avatar: '🌍', description: '量子基金前基金经理' },
+  { id: 'aswath_damodaran', name: '阿斯瓦特·达摩达兰', style: '估值大师', avatar: '📊', description: '纽约大学金融学教授' },
+  { id: 'mohnish_pabrai', name: '莫尼什·帕伯莱', style: '雪茄烟蒂投资者', avatar: '💰', description: 'Pabrai Funds创始人' },
+  { id: 'phil_fisher', name: '菲利普·费雪', style: '成长股投资大师', avatar: '📈', description: '《怎样选择成长股》作者' },
+  { id: 'george_soros', name: '乔治·索罗斯', style: '宏观对冲大师', avatar: '🌍', description: '量子基金创始人' },
+  { id: 'rakesh_jhunjhunwala', name: '拉凯什·Jhunjhunwala', style: '印度巴菲特', avatar: '🇮🇳', description: '印度最成功的个人投资者' },
+  { id: 'ray_dalio', name: '雷·达里奥', style: '风险平价大师', avatar: '⚖️', description: '桥水基金创始人' },
+  { id: 'jim_simons', name: '吉姆·西蒙斯', style: '量化投资大师', avatar: '🔢', description: '大奖章基金创始人' },
+  { id: 'paul_tudor_jones', name: '保罗·都铎·琼斯', style: '宏观交易大师', avatar: '📊', description: 'Tudor Investment创始人' },
+  { id: 'ed_thorp', name: '爱德华·索普', style: '数学投资大师', avatar: '🧮', description: '数学教授，对冲基金经理' },
+  { id: 'john_bogle', name: '约翰·博格', style: '指数投资先驱', avatar: '📉', description: 'Vanguard创始人，指数基金之父' },
+  { id: 'howard_marks', name: '霍华德·马克斯', style: '价值投资大师', avatar: '💎', description: '橡树资本创始人' },
+  { id: 'seth_klarman', name: '塞思·卡拉曼', style: '深度价值投资者', avatar: '💰', description: 'Baupost基金创始人' },
+];
+
 // 分析模式类型
 export type AnalysisMode = 'tradingagents' | 'aihedgefund' | 'fusion';
 
@@ -56,7 +79,7 @@ export function AnalysisParams({
   onRiskChange,
 }: AnalysisParamsProps) {
   // 状态
-  const [leaders, setLeaders] = useState<ApiLeader[]>([]);
+  const [leaders, setLeaders] = useState<ApiLeader[]>(DEFAULT_LEADERS);
   const [convergencePresets, setConvergencePresets] = useState<ApiConvergencePreset[]>([]);
   const [riskPreferences, setRiskPreferences] = useState<ApiRiskPreference[]>([]);
   const [loading, setLoading] = useState(true);
