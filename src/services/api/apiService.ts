@@ -27,6 +27,21 @@ export interface ApiRecommendation {
   risks: string[];
 }
 
+// 分析模式类型
+export type AnalysisMode = 'tradingagents' | 'aihedgefund' | 'fusion';
+
+// 分析请求参数
+export interface AnalyzeStockParams {
+  code: string;
+  name?: string;
+  mode?: AnalysisMode;
+  leaderId?: string;
+  maxIterations?: number;
+  convergenceGap?: number;
+  earlyStopGap?: number;
+  riskLevel?: 'conservative' | 'moderate' | 'aggressive';
+}
+
 export interface ApiAnalysisResponse {
   code: string;
   name: string;
@@ -90,23 +105,49 @@ class APIService {
 
   /**
    * 分析股票
+   * @param params - 分析参数
    */
-  async analyzeStock(
-    code: string,
-    name?: string,
-    maxIterations: number = 3
-  ): Promise<ApiAnalysisResponse> {
+  async analyzeStock(params: AnalyzeStockParams): Promise<ApiAnalysisResponse> {
+    const {
+      code,
+      name,
+      mode = 'tradingagents',
+      leaderId,
+      maxIterations = 3,
+      convergenceGap,
+      earlyStopGap,
+      riskLevel,
+    } = params;
+
+    // 构建请求体
+    const requestBody: Record<string, unknown> = {
+      code,
+      name: name || `股票${code}`,
+      include_history: false,
+      mode,
+      max_iterations: maxIterations,
+    };
+
+    // 可选参数：仅在非默认值时添加
+    if (leaderId) {
+      requestBody.leader_id = leaderId;
+    }
+    if (convergenceGap !== undefined) {
+      requestBody.convergence_gap = convergenceGap;
+    }
+    if (earlyStopGap !== undefined) {
+      requestBody.early_stop_gap = earlyStopGap;
+    }
+    if (riskLevel) {
+      requestBody.risk_level = riskLevel;
+    }
+
     const response = await fetch(`${this.baseUrl}/analyze`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({
-        code,
-        name: name || `股票${code}`,
-        include_history: false,
-        max_iterations: maxIterations,
-      }),
+      body: JSON.stringify(requestBody),
       signal: AbortSignal.timeout(this.timeout),
     });
 
