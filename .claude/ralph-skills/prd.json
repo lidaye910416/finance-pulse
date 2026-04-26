@@ -42,7 +42,7 @@
         "Typecheck passes"
       ],
       "priority": 2,
-      "passes": false,
+      "passes": true,
       "notes": "修改 src/pages/DataPage.tsx 和 macroData.ts"
     },
     {
