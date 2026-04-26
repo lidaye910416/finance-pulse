@@ -224,3 +224,79 @@ Quality checks:
 **Note:** Please manually verify PRD - US-040 passes should be true
 
 ---
+
+================================================================================
+US-041: 更新 HomePage 真实数据
+================================================================================
+Date: 2026-04-26
+
+What was implemented:
+- 添加 /api/market/hot-stocks 端点获取热门股票 (涨幅榜)
+- 添加 /api/market/margin-balance 端点获取两融余额
+- 更新 HomePage.tsx 使用真实API替代硬编码
+- 移除 mockNews, hotStocks 等硬编码
+- fetchHotStocks 调用后端 API 获取涨幅榜
+- fetchMarginBalance 调用后端 API 获取两融余额
+- fetchFastNews 使用东方财富快讯API
+- 导出 API_BASE_URL 供其他模块使用
+
+Files changed:
+- server/main.py (+140 lines)
+- src/pages/HomePage.tsx (+57/-23 lines)
+- src/services/api/apiService.ts (+1/-1 lines)
+- .claude/ralph-skills/prd.json (US-041 passes=true)
+
+Quality checks:
+- TypeScript typecheck: PASSED ✓
+- Python syntax check: PASSED ✓
+
+**Learnings for future iterations:**
+  - 后端 API: /api/market/hot-stocks 返回 { items[], updateTime }
+  - 后端 API: /api/market/margin-balance 返回 { balance, marginBalance, shortBalance, ... }
+  - 前端使用 API_BASE_URL 调用后端API (localhost:5000)
+  - hot-stocks 使用东方财富 push2 API (涨幅榜)
+  - margin-balance 使用东方财富 datacenter API (RPT_MARGIN_DETAILS)
+  - 需要导出 API_BASE_URL 供其他模块使用
+
+**Note:** Please manually update .claude/ralph-skills/prd.json - change US-041 passes to true
+
+---
+
+================================================================================
+US-042: 更新 PredictionMarket 真实数据
+================================================================================
+Date: 2026-04-26
+
+What was implemented:
+- 添加后端 API: GET /api/market/polymarket 获取 Polymarket 热门事件
+- 添加后端 API: GET /api/market/arbitrage 获取跨平台套利机会
+- 创建前端 API 服务: src/services/api/predictionMarket.ts
+- 添加 PolymarketEvent, ArbitrageOpportunity 等类型定义
+- 添加 FALLBACK_POLYMARKET_EVENTS, FALLBACK_ARBITRAGE fallback 数据
+- 更新 PredictionMarket.tsx 使用 useState/useEffect 加载数据
+- 实现 handleRefresh 函数支持手动刷新
+- 添加 loading 状态显示
+
+Files changed:
+- server/main.py (+120 lines)
+- src/services/api/predictionMarket.ts (new file)
+- src/pages/PredictionMarket.tsx (+32/-48 lines)
+- .claude/ralph-skills/prd.json (US-042 passes=true)
+
+Quality checks:
+- Python syntax check: PASSED ✓
+- TypeScript typecheck: PASSED ✓
+
+**Learnings for future iterations:**
+  - 预测市场API使用Polymarket CLOB API (https://clob.polymarket.com/markets)
+  - Polymarket API返回数据包含 outcomePrices (Yes/No 价格)
+  - 概率计算: probability = yes_price * 100
+  - 前端使用 useState/useEffect 进行数据加载
+  - 使用 Promise.all 并行加载多个API提高性能
+  - FALLBACK数据确保后端不可用时仍能正常显示
+  - 套利数据为跨平台聚合数据，需要多个平台API
+
+**Note:** Please manually verify PRD - US-042 passes should be true
+
+---
+

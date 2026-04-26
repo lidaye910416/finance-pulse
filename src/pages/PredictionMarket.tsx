@@ -1,82 +1,57 @@
+import { useEffect, useState } from 'react';
 import { Card, Badge } from '../components';
-
-interface PolymarketEvent {
-  id: string;
-  question: string;
-  probability: number;
-  volume: string;
-  trend?: 'up' | 'down';
-}
-
-interface ArbitrageOpportunity {
-  event: string;
-  platforms: {
-    name: string;
-    probability: number;
-  }[];
-  difference: number;
-  suggestion: string;
-}
-
-const polymarketEvents: PolymarketEvent[] = [
-  {
-    id: '1',
-    question: 'Will Jesus Christ return before GTA VI?',
-    probability: 48.5,
-    volume: '$11M',
-    trend: 'up',
-  },
-  {
-    id: '2',
-    question: 'Russia-Ukraine Ceasefire before GTA VI?',
-    probability: 53.5,
-    volume: '$1.54M',
-    trend: 'down',
-  },
-  {
-    id: '3',
-    question: 'New Rihanna Album before GTA VI?',
-    probability: 65,
-    volume: '$698K',
-  },
-  {
-    id: '4',
-    question: 'Fed rate cut in June 2026?',
-    probability: 68,
-    volume: '$2.3M',
-    trend: 'up',
-  },
-];
-
-const arbitrageOpportunities: ArbitrageOpportunity[] = [
-  {
-    event: '美联储6月降息',
-    platforms: [
-      { name: 'Polymarket', probability: 68 },
-      { name: 'Metaculus', probability: 71 },
-      { name: 'Kalshi', probability: 65 },
-    ],
-    difference: 6,
-    suggestion: '套利空间 6%，建议等待 >5% 差异时操作',
-  },
-  {
-    event: 'BTC突破$100K在2026年内',
-    platforms: [
-      { name: 'Polymarket', probability: 45 },
-      { name: 'Metaculus', probability: 52 },
-      { name: 'Kalshi', probability: 48 },
-    ],
-    difference: 7,
-    suggestion: '套利空间 7%，可考虑小仓布局',
-  },
-];
+import { fetchPolymarketEvents, fetchArbitrageOpportunities, PolymarketEvent, ArbitrageOpportunity } from '../services/api/predictionMarket';
 
 export function PredictionMarket() {
+  const [polymarketEvents, setPolymarketEvents] = useState<PolymarketEvent[]>([]);
+  const [arbitrageOpportunities, setArbitrageOpportunities] = useState<ArbitrageOpportunity[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    async function loadData() {
+      setLoading(true);
+      try {
+        const [events, arbitrage] = await Promise.all([
+          fetchPolymarketEvents(10),
+          fetchArbitrageOpportunities(),
+        ]);
+        setPolymarketEvents(events);
+        setArbitrageOpportunities(arbitrage);
+      } catch (error) {
+        console.error('加载预测市场数据失败:', error);
+      } finally {
+        setLoading(false);
+      }
+    }
+    loadData();
+  }, []);
+
+  const handleRefresh = () => {
+    setLoading(true);
+    Promise.all([
+      fetchPolymarketEvents(10),
+      fetchArbitrageOpportunities(),
+    ]).then(([events, arbitrage]) => {
+      setPolymarketEvents(events);
+      setArbitrageOpportunities(arbitrage);
+    }).catch((error) => {
+      console.error('刷新数据失败:', error);
+    }).finally(() => {
+      setLoading(false);
+    });
+  };
+
   return (
     <div className="space-y-4">
       <div className="flex justify-between items-center">
         <h2 className="text-xl font-bold">🔮 预测市场</h2>
-        <button className="text-finance-blue text-sm hover:underline">[刷新]</button>
+        <button
+          className="text-finance-blue text-sm hover:underline disabled:opacity-50"
+          onClick={handleRefresh}
+          disabled={loading}
+        >
+          {loading ? '加载中...' : '[刷新]'}
+        </button>
       </div>
 
       {/* Polymarket Hot Events */}
