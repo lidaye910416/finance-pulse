@@ -1,0 +1,61 @@
+================================================================================
+FinancePulse - Ralph Agent Workflow Progress
+================================================================================
+Date: 2026-04-26
+Branch: ralph/multi-agent-stock-analysis
+
+Completed User Stories (US-026 to US-030):
+--------------------------------------------------------------------------------
+US-026: 更新后端 AnalysisRequest 模型
+  - 添加 mode, leader_id, risk_level 参数
+  - 添加 convergence_gap, early_stop_gap 参数
+  - Python 语法检查通过 ✓
+
+US-027: 实现工作流路由逻辑
+  - TradingAgents 模式 → create_tradingagents_workflow (line 60)
+  - AIHedgeFund 模式 → create_aihedgefund_workflow (line 62)
+  - Fusion 模式 → create_fusion_workflow (line 64)
+  - Python 语法检查通过 ✓
+
+US-028: 添加 /api/leaders 端点
+  - GET /api/leaders 返回 21 位投资大师
+  - 格式: { leaders: [{id, name, style, avatar, description}] }
+  - Python 语法检查通过 ✓
+
+US-029: 修复前端 getLeaders fallback
+  - 后端不可用时使用 LOCAL_LEADERS_FALLBACK (21位大师)
+  - Typecheck passes ✓
+
+US-030: 验证完整流程
+  - 前端 mode 参数正确传递到后端 /analyze 端点
+  - leader_id 正确传递到工作流
+  - 工作流根据 mode 参数选择对应实现 ✓
+
+================================================================================
+Verification Results:
+================================================================================
+Backend:
+  - main.py: Python 语法通过
+  - Workflow routing: 3 workflows imported and routed correctly
+  - /api/leaders: Returns 21 leaders from LEADERS config
+
+Frontend:
+  - apiService.ts: Typecheck passes (--skipLibCheck)
+  - getLeaders(): Catches errors and uses LOCAL_LEADERS_FALLBACK
+
+Integration:
+  - TradingAgents mode → tradingagents_workflow (8-stage)
+  - AIHedgeFund mode → aihedgefund_workflow (4-layer)  
+  - Fusion mode → fusion_workflow (Leader-based)
+
+================================================================================
+Git History:
+================================================================================
+2fde911 feat: US-029 - 修复前端 getLeaders fallback
+2f66783 feat: US-013 - 验证前端与 PRD 对齐完成
+4af6f10 feat: US-012 - 重构 AnalysisPage 集成 PRD 组件
+b2930d3 feat: US-011 - 更新 apiService 支持分析模式参数
+3b950bc fix: add missing API types and methods for AnalysisParams
+e537056 feat: restore all tradingagents components and workflows
+
+All US-026 to US-030 completed successfully.
