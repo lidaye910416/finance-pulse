@@ -41,17 +41,13 @@ export function DataPage() {
   // 市场数据状态
   const [marketData, setMarketData] = useState({
     indices: [
-      { name: '上证指数', code: '000001', price: 3245.67, changePercent: -0.03 },
-      { name: '深证成指', code: '399001', price: 10245.23, changePercent: 0.45 },
-      { name: '创业板指', code: '399006', price: 2089.45, changePercent: -0.59 },
-      { name: '沪深300', code: '000300', price: 3856.78, changePercent: 0.61 },
+      { name: '上证指数', code: '000001', price: 0, changePercent: 0 },
+      { name: '深证成指', code: '399001', price: 0, changePercent: 0 },
+      { name: '创业板指', code: '399006', price: 0, changePercent: 0 },
+      { name: '沪深300', code: '000300', price: 0, changePercent: 0 },
     ],
     northboundTrend: [
-      { day: '周一', value: 35 },
-      { day: '周二', value: 42 },
-      { day: '周三', value: 38 },
-      { day: '周四', value: 55 },
-      { day: '周五', value: 67 },
+      { day: '-', value: 0 },
     ],
   });
 
@@ -116,12 +112,12 @@ export function DataPage() {
           phase: fearGreed.phase,
         }));
 
-        // 更新北向趋势
+        // 更新北向趋势 - 使用实际日期
         if (northbound.length > 0) {
           setMarketData(prev => ({
             ...prev,
-            northboundTrend: northbound.slice(0, 5).map((n, i) => ({
-              day: ['周一', '周二', '周三', '周四', '周五'][i] || `Day${i + 1}`,
+            northboundTrend: northbound.slice(0, 7).map((n) => ({
+              day: n.date ? new Date(n.date).toLocaleDateString('zh-CN', { month: 'short', day: 'numeric' }) : '-',
               value: n.total,
             })),
           }));

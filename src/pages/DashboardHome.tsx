@@ -1,6 +1,7 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { MetricCard, Card, Badge } from '../components';
 import { useNavigate } from 'react-router-dom';
+import { fetchFearGreedIndex, fetchLimitUpDown } from '../services/api/marketData';
 
 // 指标详细解释数据
 export type MetricExplanationKeys = 'fearGreed' | 'position' | 'northbound' | 'sentiment';
@@ -58,10 +59,7 @@ function MetricModal({ metricKey, onClose }: { metricKey: string; onClose: () =>
         className="relative w-full max-w-lg bg-surface-100 rounded-t-3xl p-6 animate-slide-up max-h-[80vh] overflow-y-auto"
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Handle */}
         <div className="absolute top-3 left-1/2 -translate-x-1/2 w-10 h-1 bg-gray-600 rounded-full" />
-
-        {/* Header */}
         <div className="flex items-center justify-between mb-4 mt-2">
           <h2 className="text-lg font-display font-bold text-white">{data.title}</h2>
           <button
@@ -71,15 +69,11 @@ function MetricModal({ metricKey, onClose }: { metricKey: string; onClose: () =>
             ✕
           </button>
         </div>
-
-        {/* Current Status */}
         <div className="bg-gradient-to-r from-accent-blue/20 to-accent-green/20 rounded-xl p-4 mb-4 border border-accent-blue/20">
           <div className="text-xs text-gray-400 mb-1">当前值</div>
           <div className="text-2xl font-display font-bold text-white">{data.currentValue}</div>
           <div className="text-sm text-accent-green mt-1">{data.phase}</div>
         </div>
-
-        {/* Calculation */}
         <div className="mb-4">
           <h3 className="text-sm font-display font-semibold text-gray-400 uppercase tracking-wider mb-2 flex items-center gap-2">
             <span className="w-5 h-5 rounded bg-accent-blue/20 text-accent-blue text-xs flex items-center justify-center">📐</span>
@@ -89,8 +83,6 @@ function MetricModal({ metricKey, onClose }: { metricKey: string; onClose: () =>
             {data.calculation}
           </div>
         </div>
-
-        {/* Interpretation */}
         <div className="mb-4">
           <h3 className="text-sm font-display font-semibold text-gray-400 uppercase tracking-wider mb-2 flex items-center gap-2">
             <span className="w-5 h-5 rounded bg-accent-green/20 text-accent-green text-xs flex items-center justify-center">📊</span>
@@ -100,8 +92,6 @@ function MetricModal({ metricKey, onClose }: { metricKey: string; onClose: () =>
             {data.interpretation}
           </div>
         </div>
-
-        {/* Suggestion */}
         <div className="bg-accent-yellow/10 rounded-xl p-4 border border-accent-yellow/20">
           <div className="flex items-center gap-2 mb-2">
             <span className="text-accent-yellow">💡</span>
@@ -109,8 +99,6 @@ function MetricModal({ metricKey, onClose }: { metricKey: string; onClose: () =>
           </div>
           <p className="text-sm text-gray-300">{data.suggestion}</p>
         </div>
-
-        {/* Navigation Hint */}
         <div className="mt-4 pt-4 border-t border-white/10">
           <p className="text-xs text-gray-500 text-center">
             点击查看更多详细分析 → A股情绪 / 仓位管理 页面
@@ -121,73 +109,72 @@ function MetricModal({ metricKey, onClose }: { metricKey: string; onClose: () =>
   );
 }
 
-const fearGreedData = { value: 26, label: '恐惧贪婪', subValue: '极度恐惧', trend: 'down' as const };
-const positionData = { value: '40-60%', label: '仓位建议', subValue: '轻仓试错', trend: 'neutral' as const };
-const northboundData = { value: '+23.5亿', label: '北向资金', subValue: '连续3日净买', trend: 'up' as const };
-const sentimentData = { value: '修复期', label: '市场情绪', subValue: 'Phase 2', trend: 'up' as const };
+// 动态获取的市场数据
+function useMarketData() {
+  const [fearGreed, setFearGreed] = useState({ value: 26, phase: '极度恐惧' });
+  const [limitUpDown, setLimitUpDown] = useState({ limitUp: 47, limitDown: 8 });
+  const [loading, setLoading] = useState(true);
 
-const marketQuotes = [
-  { symbol: '标普500', price: '7,126', change: '+1.20%', trend: 'up' as const, path: '/prediction' },
-  { symbol: '沪深300', price: '3,892', change: '+0.83%', trend: 'up' as const, path: '/a-stock' },
-  { symbol: '现货黄金', price: '$4,879', change: '+1.48%', trend: 'up' as const, path: '/macro' },
-  { symbol: 'WTI原油', price: '$82.59', change: '-9.41%', trend: 'down' as const, path: '/macro' },
-  { symbol: '比特币', price: '$75,951', change: '-1.86%', trend: 'down' as const, path: '/prediction' },
-  { symbol: '道琼斯', price: '49,447', change: '+1.79%', trend: 'up' as const, path: '/prediction' },
-  { symbol: '纳斯达克', price: '24,468', change: '+1.52%', trend: 'up' as const, path: '/prediction' },
-  { symbol: '上证指数', price: '3,241', change: '+0.45%', trend: 'up' as const, path: '/a-stock' },
-];
+  useEffect(() => {
+    const loadData = async () => {
+      try {
+        const [fg, lud] = await Promise.all([
+          fetchFearGreedIndex(),
+          fetchLimitUpDown(),
+        ]);
+        setFearGreed(fg);
+        setLimitUpDown(lud);
+      } catch (e) {
+        console.error('加载市场数据失败:', e);
+      } finally {
+        setLoading(false);
+      }
+    };
+    loadData();
+    // 每30秒刷新一次
+    const interval = setInterval(loadData, 30000);
+    return () => clearInterval(interval);
+  }, []);
 
-const newsItems = [
-  { category: '美股', color: 'green' as const, title: '特斯拉Q1交付量超预期，股价+5.2%', path: '/news' },
-  { category: '大宗', color: 'red' as const, title: '霍尔木兹局势紧张，原油-9.41%', path: '/news' },
-  { category: '科技', color: 'blue' as const, title: '字节跳动发布Gauss 2.0，推理速度+40%', path: '/news' },
-  { category: 'A股', color: 'yellow' as const, title: 'AI芯片板块爆发，多股涨停', path: '/news' },
-  { category: '加密', color: 'purple' as const, title: 'BTC $75,951 (-1.86%)，恐慌缓解', path: '/prediction' },
-];
+  return { fearGreed, limitUpDown, loading };
+}
 
-const forexRates = [
-  { pair: 'USD/CNY', rate: '6.8324', path: '/tools' },
-  { pair: 'USD/EUR', rate: '0.8478', path: '/tools' },
-  { pair: 'USD/JPY', rate: '158.62', path: '/tools' },
-  { pair: 'USD/GBP', rate: '0.7918', path: '/tools' },
-];
-
-const quickNavItems = [
-  { icon: '📊', title: 'A股行情', desc: '情绪仪表盘', path: '/a-stock', color: 'blue' },
-  { icon: '📈', title: '宏观数据', desc: 'GDP/CPI/PMI', path: '/macro', color: 'green' },
-  { icon: '🎯', title: '仓位管理', desc: '风险控制', path: '/position', color: 'yellow' },
-  { icon: '🔮', title: '预测市场', desc: 'Polymarket', path: '/prediction', color: 'purple' },
-];
-
-function QuoteCard({ quote, index, onClick }: { quote: typeof marketQuotes[0]; index: number; onClick?: () => void }) {
-  const isUp = quote.trend === 'up';
-  return (
-    <button
-      onClick={onClick}
-      className="bg-surface-100/50 rounded-xl p-3 border border-white/5 hover:bg-surface-200 hover:border-white/10 transition-all duration-200 animate-fade-in-up text-left btn-press w-full"
-      style={{ animationDelay: `${200 + index * 50}ms` }}
-    >
-      <div className="flex items-center justify-between mb-1">
-        <span className="text-[10px] font-display font-medium text-gray-500 uppercase tracking-wider">{quote.symbol}</span>
-        <span className={`text-[10px] font-mono ${isUp ? 'text-accent-green' : 'text-accent-red'}`}>
-          {isUp ? '▲' : '▼'}
-        </span>
-      </div>
-      <div className="text-base font-display font-bold text-white font-mono">{quote.price}</div>
-      <div className={`text-xs font-mono ${isUp ? 'text-accent-green' : 'text-accent-red'}`}>
-        {quote.change}
-      </div>
-    </button>
-  );
+// 根据恐惧贪婪获取颜色
+function getFearGreedColor(value: number): string {
+  if (value <= 25) return 'red';
+  if (value <= 45) return 'orange';
+  if (value <= 55) return 'yellow';
+  if (value <= 75) return 'blue';
+  return 'green';
 }
 
 export function DashboardHome() {
   const navigate = useNavigate();
   const [selectedMetric, setSelectedMetric] = useState<string | null>(null);
+  const { fearGreed, limitUpDown, loading } = useMarketData();
+
+  // 动态计算仓位建议
+  const getPositionAdvice = () => {
+    if (fearGreed.value <= 30) return { value: '20-40%', phase: '冰点期', subValue: '极低仓位' };
+    if (fearGreed.value <= 45) return { value: '30-50%', phase: '恐惧', subValue: '轻仓试错' };
+    if (fearGreed.value <= 55) return { value: '40-60%', phase: '中性', subValue: '适中仓位' };
+    if (fearGreed.value <= 75) return { value: '60-80%', phase: '贪婪', subValue: '较高仓位' };
+    return { value: '80-100%', phase: '极度贪婪', subValue: '满仓' };
+  };
+
+  const positionAdvice = getPositionAdvice();
+
+  // 动态情绪数据
+  const sentimentPhase = fearGreed.value <= 30 ? '冰点' : 
+                         fearGreed.value <= 45 ? '修复' : 
+                         fearGreed.value <= 55 ? '分歧' : '亢奋';
+
+  // 动态涨跌停状态
+  const limitStatus = limitUpDown.limitUp < 30 ? '偏冰点' : 
+                      limitUpDown.limitUp > 100 ? '偏亢奋' : '正常';
 
   return (
     <div className="space-y-4">
-      {/* Metric Detail Modal */}
       {selectedMetric && (
         <MetricModal metricKey={selectedMetric} onClose={() => setSelectedMetric(null)} />
       )}
@@ -201,33 +188,36 @@ export function DashboardHome() {
         <div className="relative">
           <div className="flex items-center gap-2 mb-3">
             <span className="w-2 h-2 rounded-full bg-accent-green animate-pulse" />
-            <span className="text-xs font-display text-gray-500 uppercase tracking-wider">市场状态</span>
-            <span className="text-xs text-gray-600">（点击了解详情）</span>
+            <span className="text-xs font-display text-gray-500 uppercase tracking-wider">
+              {loading ? '加载中...' : '实时数据'}
+            </span>
           </div>
           <div className="text-2xl font-display font-bold text-white mb-1">
             早上好
           </div>
           <div className="text-sm text-gray-400">
-            A股市场处于 <span className="text-accent-green font-semibold">修复期</span>
+            A股市场处于 <span className={`font-semibold ${
+              sentimentPhase === '冰点' ? 'text-accent-blue' :
+              sentimentPhase === '修复' ? 'text-accent-green' :
+              sentimentPhase === '分歧' ? 'text-accent-yellow' : 'text-accent-red'
+            }`}>{sentimentPhase}</span>
+            {limitUpDown.limitUp < 50 && <span className="text-gray-500 ml-2">（涨停偏少，情绪低迷）</span>}
           </div>
         </div>
       </div>
 
       {/* Quick Navigation */}
       <div className="grid grid-cols-4 gap-2 stagger-children">
-        {quickNavItems.map((item) => (
+        {[
+          { icon: '📊', title: 'A股行情', desc: '情绪仪表盘', path: '/a-stock' },
+          { icon: '📈', title: '宏观数据', desc: 'GDP/CPI/PMI', path: '/macro' },
+          { icon: '🎯', title: '仓位管理', desc: '风险控制', path: '/position' },
+          { icon: '🔮', title: '预测市场', desc: 'Polymarket', path: '/prediction' },
+        ].map((item) => (
           <button
             key={item.path}
             onClick={() => navigate(item.path)}
-            className={`
-              bg-surface-100/50 rounded-xl p-3
-              border border-white/5
-              hover:bg-surface-200
-              hover:border-white/10
-              transition-all duration-200
-              btn-press
-              flex flex-col items-center text-center
-            `}
+            className="bg-surface-100/50 rounded-xl p-3 border border-white/5 hover:bg-surface-200 hover:border-white/10 transition-all duration-200 btn-press flex flex-col items-center text-center"
           >
             <span className="text-xl mb-1">{item.icon}</span>
             <span className="text-xs font-display font-medium text-white">{item.title}</span>
@@ -236,167 +226,104 @@ export function DashboardHome() {
         ))}
       </div>
 
-      {/* Key Metrics - Clickable */}
+      {/* Key Metrics - 动态数据 */}
       <div className="grid grid-cols-2 gap-3 stagger-children">
-        <button
-          onClick={() => setSelectedMetric('fearGreed')}
-          className="text-left"
-        >
-          <MetricCard {...fearGreedData} icon="😰" animationDelay={0} />
+        <button onClick={() => setSelectedMetric('fearGreed')} className="text-left">
+          <MetricCard 
+            icon="😰" 
+            label="恐惧贪婪" 
+            value={loading ? '...' : fearGreed.value.toString()}
+            subValue={loading ? '加载中' : fearGreed.phase}
+            trend="neutral"
+            animationDelay={0}
+          />
           <div className="text-[10px] text-gray-600 mt-1 text-center">点击了解计算方法 →</div>
         </button>
-        <button
-          onClick={() => setSelectedMetric('position')}
-          className="text-left"
-        >
-          <MetricCard {...positionData} icon="📊" animationDelay={50} />
+        <button onClick={() => setSelectedMetric('position')} className="text-left">
+          <MetricCard 
+            icon="📊" 
+            label="仓位建议" 
+            value={loading ? '...' : positionAdvice.value}
+            subValue={loading ? '加载中' : positionAdvice.phase}
+            trend={fearGreed.value <= 45 ? 'up' : 'down'}
+            animationDelay={50}
+          />
           <div className="text-[10px] text-gray-600 mt-1 text-center">点击了解计算方法 →</div>
         </button>
-        <button
-          onClick={() => setSelectedMetric('northbound')}
-          className="text-left"
-        >
-          <MetricCard {...northboundData} icon="🌊" animationDelay={100} />
+        <button onClick={() => setSelectedMetric('northbound')} className="text-left">
+          <MetricCard 
+            icon="🌊" 
+            label="涨停数量" 
+            value={loading ? '...' : limitUpDown.limitUp.toString()}
+            subValue={loading ? '加载中' : limitStatus}
+            trend={limitUpDown.limitUp >= 60 ? 'up' : 'down'}
+            animationDelay={100}
+          />
           <div className="text-[10px] text-gray-600 mt-1 text-center">点击了解计算方法 →</div>
         </button>
-        <button
-          onClick={() => setSelectedMetric('sentiment')}
-          className="text-left"
-        >
-          <MetricCard {...sentimentData} icon="📈" animationDelay={150} />
+        <button onClick={() => setSelectedMetric('sentiment')} className="text-left">
+          <MetricCard 
+            icon="📈" 
+            label="市场情绪" 
+            value={loading ? '...' : sentimentPhase}
+            subValue={loading ? '加载中' : `涨跌停 ${limitUpDown.limitUp}/${limitUpDown.limitDown}`}
+            trend={sentimentPhase === '修复' || sentimentPhase === '分歧' ? 'up' : 'down'}
+            animationDelay={150}
+          />
           <div className="text-[10px] text-gray-600 mt-1 text-center">点击了解计算方法 →</div>
         </button>
       </div>
 
-      {/* Market Quotes */}
-      <Card title="行情一览" animationDelay={200}>
-        <div className="grid grid-cols-4 gap-2">
-          {marketQuotes.slice(0, 4).map((q, i) => (
-            <QuoteCard
-              key={q.symbol}
-              quote={q}
-              index={i}
-              onClick={() => navigate(q.path)}
-            />
-          ))}
-        </div>
-        <div className="grid grid-cols-4 gap-2 mt-2">
-          {marketQuotes.slice(4).map((q, i) => (
-            <QuoteCard
-              key={q.symbol}
-              quote={q}
-              index={i + 4}
-              onClick={() => navigate(q.path)}
-            />
-          ))}
-        </div>
-      </Card>
-
-      {/* News Feed */}
-      <Card title="今日资讯" animationDelay={300}>
-        <div className="space-y-2">
-          {newsItems.map((news, index) => (
-            <button
-              key={index}
-              onClick={() => navigate(news.path)}
-              className="w-full flex items-center gap-3 py-2.5 border-b border-white/5 last:border-0 animate-slide-in text-left"
-              style={{ animationDelay: `${350 + index * 50}ms` }}
-            >
-              <div className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${
-                news.color === 'green' ? 'bg-accent-green shadow-[0_0_8px_rgba(16,185,129,0.5)]' :
-                news.color === 'red' ? 'bg-accent-red shadow-[0_0_8px_rgba(239,68,68,0.5)]' :
-                news.color === 'blue' ? 'bg-accent-blue shadow-[0_0_8px_rgba(59,130,246,0.5)]' :
-                news.color === 'yellow' ? 'bg-accent-yellow shadow-[0_0_8px_rgba(245,158,11,0.5)]' :
-                'bg-accent-purple shadow-[0_0_8px_rgba(139,92,246,0.5)]'
-              }`} />
-              <div className="flex-1 min-w-0">
-                <p className="text-sm text-white truncate">{news.title}</p>
-              </div>
-              <Badge text={news.category} variant={news.color} />
-            </button>
-          ))}
-        </div>
-      </Card>
-
-      {/* Forex Rates */}
-      <Card title="实时汇率" animationDelay={400}>
-        <div className="grid grid-cols-4 gap-2">
-          {forexRates.map((forex, index) => (
-            <button
-              key={forex.pair}
-              onClick={() => navigate(forex.path)}
-              className="bg-surface-100/30 rounded-xl py-2.5 px-1 text-center animate-fade-in-up btn-press hover:bg-surface-200 transition-colors"
-              style={{ animationDelay: `${450 + index * 50}ms` }}
-            >
-              <div className="text-[10px] font-mono text-gray-500">{forex.pair}</div>
-              <div className="text-sm font-mono font-medium text-white">{forex.rate}</div>
-            </button>
-          ))}
-        </div>
-      </Card>
-
-      {/* Trading Signals */}
-      <Card title="交易信号" variant="highlighted" animationDelay={500}>
-        <div className="space-y-3">
-          {/* Signal Strength */}
-          <div className="space-y-2">
-            <div className="flex items-center justify-between text-xs">
-              <span className="text-gray-500">信号强度</span>
-              <span className="text-accent-yellow font-mono">62%</span>
-            </div>
-            <div className="h-2 bg-surface-200 rounded-full overflow-hidden">
-              <div className="h-full w-[62%] bg-gradient-to-r from-accent-green via-accent-yellow to-accent-green rounded-full" />
-            </div>
+      {/* Market Status Info */}
+      <Card title="市场状态" animationDelay={200}>
+        <div className="grid grid-cols-3 gap-4">
+          <div className="text-center p-3 bg-accent-blue/10 rounded-xl">
+            <div className="text-2xl font-bold text-white font-mono">{loading ? '...' : fearGreed.value}</div>
+            <div className="text-xs text-gray-400">恐惧贪婪</div>
+            <Badge text={loading ? '加载中' : fearGreed.phase} variant={getFearGreedColor(fearGreed.value) as any} />
           </div>
-
-          {/* Bullish/Bearish */}
-          <div className="grid grid-cols-2 gap-2 pt-2">
-            <button
-              onClick={() => navigate('/a-stock')}
-              className="bg-accent-green/10 rounded-xl p-3 border border-accent-green/20 hover:bg-accent-green/20 transition-colors btn-press text-left"
-            >
-              <div className="flex items-center gap-2 mb-1">
-                <span className="text-accent-green">✓</span>
-                <span className="text-xs font-medium text-accent-green">利好因素</span>
-              </div>
-              <ul className="text-[10px] text-gray-400 space-y-0.5">
-                <li>• 美股反弹动能持续</li>
-                <li>• 北向资金净买入</li>
-                <li>• AI政策持续加码</li>
-              </ul>
-            </button>
-            <button
-              onClick={() => navigate('/macro')}
-              className="bg-accent-red/10 rounded-xl p-3 border border-accent-red/20 hover:bg-accent-red/20 transition-colors btn-press text-left"
-            >
-              <div className="flex items-center gap-2 mb-1">
-                <span className="text-accent-red">!</span>
-                <span className="text-xs font-medium text-accent-red">风险提示</span>
-              </div>
-              <ul className="text-[10px] text-gray-400 space-y-0.5">
-                <li>• 成交量有所萎缩</li>
-                <li>• 人民币汇率承压</li>
-                <li>• 外部地缘风险</li>
-              </ul>
-            </button>
+          <div className="text-center p-3 bg-accent-green/10 rounded-xl">
+            <div className="text-2xl font-bold text-accent-green font-mono">{loading ? '...' : limitUpDown.limitUp}</div>
+            <div className="text-xs text-gray-400">涨停家数</div>
+            <Badge text={loading ? '加载中' : limitStatus} variant="yellow" />
           </div>
+          <div className="text-center p-3 bg-accent-red/10 rounded-xl">
+            <div className="text-2xl font-bold text-accent-red font-mono">{loading ? '...' : limitUpDown.limitDown}</div>
+            <div className="text-xs text-gray-400">跌停家数</div>
+            <Badge text="正常" variant="green" />
+          </div>
+        </div>
+      </Card>
 
-          {/* Position Suggestion */}
+      {/* Quick Actions */}
+      <Card title="快捷功能" animationDelay={300}>
+        <div className="grid grid-cols-2 gap-3">
           <button
-            onClick={() => setSelectedMetric('position')}
-            className="w-full bg-surface-200/50 rounded-xl p-3 border border-white/5 hover:bg-surface-200 transition-colors btn-press text-left"
+            onClick={() => navigate('/a-stock')}
+            className="bg-surface-200/50 rounded-xl p-4 border border-white/5 hover:bg-surface-300 transition-all btn-press text-left"
           >
-            <div className="flex items-center justify-between">
-              <span className="text-xs text-gray-500">仓位建议</span>
-              <Badge text="40-60%" variant="yellow" />
-            </div>
-            <div className="text-sm text-white mt-1">
-              轻仓试错，不追涨杀跌
-            </div>
-            <div className="text-[10px] text-gray-600 mt-1">点击查看详细计算方法 →</div>
+            <div className="text-lg mb-1">📊</div>
+            <div className="text-sm font-medium text-white">A股情绪分析</div>
+            <div className="text-xs text-gray-500">查看详细市场情绪数据</div>
+          </button>
+          <button
+            onClick={() => navigate('/data')}
+            className="bg-surface-200/50 rounded-xl p-4 border border-white/5 hover:bg-surface-300 transition-all btn-press text-left"
+          >
+            <div className="text-lg mb-1">📈</div>
+            <div className="text-sm font-medium text-white">数据中心</div>
+            <div className="text-xs text-gray-500">查看更多市场数据</div>
           </button>
         </div>
       </Card>
+
+      {/* Last Update Time */}
+      <div className="text-center text-xs text-gray-600">
+        {loading ? '数据加载中...' : `数据更新时间: ${new Date().toLocaleTimeString('zh-CN')}`}
+        <button onClick={() => window.location.reload()} className="ml-2 text-accent-blue hover:underline">
+          刷新
+        </button>
+      </div>
     </div>
   );
 }

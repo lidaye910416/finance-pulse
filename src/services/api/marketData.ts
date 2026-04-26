@@ -7,7 +7,7 @@
 import type { Quote, KLine, NorthboundData } from '../data/types';
 
 // 后端 API 基础 URL
-const API_BASE_URL = 'http://localhost:5000';
+const API_BASE_URL = 'http://localhost:8080';
 
 // 东方财富 API 基础 URL（用于股票行情和K线）
 const EAST_MONEY_BASE = 'https://push2.eastmoney.com';

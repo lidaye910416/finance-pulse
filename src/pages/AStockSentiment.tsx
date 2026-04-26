@@ -1,101 +1,139 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Card, Badge } from '../components';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { metricExplanations, MetricExplanationKeys } from './DashboardHome';
+import { fetchFearGreedIndex, fetchLimitUpDown, fetchNorthboundData } from '../services/api/marketData';
 
-const fearGreedValue = 26;
+function useSentimentData() {
+  const [fearGreed, setFearGreed] = useState({ value: 26, phase: '极度恐惧' });
+  const [limitUpDown, setLimitUpDown] = useState({ limitUp: 47, limitDown: 8 });
+  const [northboundData, setNorthboundData] = useState<{date: string; total: number}[]>([]);
+  const [loading, setLoading] = useState(true);
 
-const quantSignals = [
-  { label: '涨停数量', value: 47, status: '偏冰点', variant: 'yellow' as const },
-  { label: '跌停数量', value: 8, status: '正常', variant: 'green' as const },
-  { label: '成交额', value: '7,821亿', status: '萎缩', variant: 'yellow' as const },
-  { label: '北向资金', value: '+23亿', status: '净买入', variant: 'green' as const },
-];
+  const loadData = async () => {
+    try {
+      const [fg, lud, nb] = await Promise.all([
+        fetchFearGreedIndex(),
+        fetchLimitUpDown(),
+        fetchNorthboundData(7),
+      ]);
+      setFearGreed(fg);
+      setLimitUpDown(lud);
+      setNorthboundData(nb);
+    } catch (e) {
+      console.error('加载数据失败:', e);
+    } finally {
+      setLoading(false);
+    }
+  };
 
-const northboundTrend = [
-  { day: '周一', value: 35 },
-  { day: '周二', value: 42 },
-  { day: '周三', value: 38 },
-  { day: '周四', value: 55 },
-  { day: '周五', value: 67 },
-  { day: '周六', value: 72 },
-  { day: '周日', value: 80 },
-];
+  useEffect(() => {
+    loadData();
+    const interval = setInterval(loadData, 30000);
+    return () => clearInterval(interval);
+  }, []);
 
-const sectorFlow = [
-  { name: 'AI算力', flow: '+28亿', trend: 'up' as const },
-  { name: '半导体设备', flow: '+15亿', trend: 'up' as const },
-  { name: '房地产', flow: '-8亿', trend: 'down' as const },
-  { name: '银行', flow: '-3亿', trend: 'down' as const },
-];
+  return { fearGreed, limitUpDown, northboundData, loading, refetch: loadData };
+}
 
-const premarketNews = [
-  '国家发布AI芯片补贴政策，规模百亿级（中长期利好）',
-  '宁德时代辟谣：暂未与特斯拉合作建厂',
-  '东方财富：北向资金连续3日净买入',
-];
+// 获取涨跌状态描述
+function getLimitStatus(limitUp: number): string {
+  if (limitUp < 30) return '偏冰点';
+  if (limitUp < 60) return '正常';
+  if (limitUp < 100) return '偏活跃';
+  return '偏亢奋';
+}
 
 export function AStockSentiment() {
   const [showModal, setShowModal] = useState(false);
   const [activeMetric, setActiveMetric] = useState<MetricExplanationKeys | ''>('');
+  const { fearGreed, limitUpDown, northboundData, loading, refetch } = useSentimentData();
 
   const openMetricModal = (metricKey: MetricExplanationKeys) => {
     setActiveMetric(metricKey);
     setShowModal(true);
   };
 
+  // 准备图表数据 - 使用实际日期
+  const chartData = northboundData.slice(-7).map((item) => ({
+    date: item.date ? new Date(item.date).toLocaleDateString('zh-CN', { month: 'short', day: 'numeric' }) : '',
+    value: item.total,
+  }));
+
+  // 计算7日累计
+  const totalNorthbound = northboundData.slice(-7).reduce((sum, item) => sum + (item.total || 0), 0);
+
   return (
     <div className="space-y-4">
       <div className="flex justify-between items-center">
         <h2 className="text-xl font-bold">📊 A股市场情绪</h2>
-        <button className="text-finance-blue text-sm hover:underline">[刷新]</button>
+        <button 
+          onClick={() => refetch()}
+          className="text-accent-blue text-sm hover:underline"
+        >
+          {loading ? '加载中...' : '[刷新]'}
+        </button>
       </div>
 
       {/* Sentiment Gauge - Clickable */}
       <Card
-        className="cursor-pointer hover:border-finance-blue/50 transition-colors"
+        className="cursor-pointer hover:border-accent-blue/50 transition-colors"
         onClick={() => openMetricModal('fearGreed')}
       >
         <div className="flex items-center justify-between mb-2">
           <span className="text-gray-400 text-sm">恐惧贪婪指数</span>
-          <span className="text-xs text-finance-blue">点击查看计算方法 →</span>
+          <span className="text-xs text-accent-blue">点击查看计算方法 →</span>
         </div>
         <div className="relative py-4">
-          {/* Phase bar */}
           <div className="h-3 bg-gradient-to-r from-blue-500 via-green-500 via-yellow-500 to-red-500 rounded-full relative">
-            {/* Phase markers */}
             <div className="absolute top-6 left-0 text-xs text-gray-400">冰点</div>
             <div className="absolute top-6 left-1/4 text-xs text-gray-400 -translate-x-1/2">修复</div>
             <div className="absolute top-6 left-1/2 text-xs text-gray-400 -translate-x-1/2">分歧</div>
             <div className="absolute top-6 right-0 text-xs text-gray-400">亢奋</div>
-
-            {/* Current position indicator */}
             <div
               className="absolute -top-1 w-4 h-5 bg-white rounded-full shadow-lg transform -translate-x-1/2"
-              style={{ left: `${Math.min(fearGreedValue / 100 * 100, 95)}%` }}
+              style={{ left: `${Math.min(fearGreed.value, 95)}%` }}
             >
               <div className="absolute -top-6 left-1/2 -translate-x-1/2 text-center">
                 <span className="text-2xl">😰</span>
-                <div className="text-white text-sm font-bold">{fearGreedValue}</div>
+                <div className="text-white text-sm font-bold">{fearGreed.value}</div>
               </div>
             </div>
           </div>
         </div>
         <div className="text-center mt-8 text-gray-400 text-sm">
-          当前: <span className="text-white font-semibold">极度恐惧</span> ({fearGreedValue})
+          当前: <span className="text-white font-semibold">{fearGreed.phase}</span> ({fearGreed.value})
         </div>
       </Card>
 
       {/* Quant Signals */}
       <Card title="量化信号面板">
         <div className="grid grid-cols-2 gap-3">
-          {quantSignals.map((signal) => (
-            <div key={signal.label} className="bg-gray-700 rounded-lg p-3">
-              <div className="text-gray-400 text-xs mb-1">{signal.label}</div>
-              <div className="text-white font-semibold text-lg">{signal.value}</div>
-              <Badge text={signal.status} variant={signal.variant} />
+          <div className="bg-gray-700 rounded-lg p-3">
+            <div className="text-gray-400 text-xs mb-1">涨停数量</div>
+            <div className="text-white font-semibold text-lg">{loading ? '...' : limitUpDown.limitUp}</div>
+            <Badge text={loading ? '加载中' : getLimitStatus(limitUpDown.limitUp)} variant="yellow" />
+          </div>
+          <div className="bg-gray-700 rounded-lg p-3">
+            <div className="text-gray-400 text-xs mb-1">跌停数量</div>
+            <div className="text-white font-semibold text-lg">{loading ? '...' : limitUpDown.limitDown}</div>
+            <Badge text="正常" variant="green" />
+          </div>
+          <div className="bg-gray-700 rounded-lg p-3">
+            <div className="text-gray-400 text-xs mb-1">成交额</div>
+            <div className="text-white font-semibold text-lg">{loading ? '...' : '加载中'}</div>
+            <Badge text="正常" variant="blue" />
+          </div>
+          <div className="bg-gray-700 rounded-lg p-3">
+            <div className="text-gray-400 text-xs mb-1">北向资金</div>
+            <div className="text-white font-semibold text-lg">
+              {loading ? '...' : (northboundData[0]?.total >= 0 ? '+' : '') + (northboundData[0]?.total?.toFixed(0) || '0')}亿
             </div>
-          ))}
+            <Badge 
+              text={loading ? '加载中' : (northboundData[0]?.total >= 0 ? '净买入' : '净卖出')} 
+              variant={northboundData[0]?.total >= 0 ? 'green' : 'red'} 
+            />
+          </div>
         </div>
       </Card>
 
@@ -103,9 +141,9 @@ export function AStockSentiment() {
       <Card title="北向资金趋势（近7日）">
         <div className="h-40">
           <ResponsiveContainer width="100%" height="100%">
-            <LineChart data={northboundTrend}>
+            <LineChart data={chartData.length > 0 ? chartData : [{date: '-', value: 0}]}>
               <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
-              <XAxis dataKey="day" stroke="#9CA3AF" fontSize={12} />
+              <XAxis dataKey="date" stroke="#9CA3AF" fontSize={12} />
               <YAxis stroke="#9CA3AF" fontSize={12} />
               <Tooltip
                 contentStyle={{ backgroundColor: '#1F2937', border: 'none' }}
@@ -123,43 +161,15 @@ export function AStockSentiment() {
         </div>
         <div className="mt-2">
           <div className="bg-gray-700 rounded-full h-3 overflow-hidden">
-            <div className="bg-finance-green h-full rounded-full" style={{ width: '60%' }}></div>
+            <div 
+              className="bg-accent-green h-full rounded-full" 
+              style={{ width: `${Math.min(Math.abs(totalNorthbound) / 200 * 100, 100)}%` }}
+            ></div>
           </div>
-          <div className="text-sm text-gray-400 mt-1">7日累计净买入 ¥127亿</div>
+          <div className="text-sm text-gray-400 mt-1">
+            7日累计净买入 ¥{totalNorthbound >= 0 ? '+' : ''}{totalNorthbound.toFixed(0)}亿
+          </div>
         </div>
-      </Card>
-
-      {/* Margin Balance */}
-      <Card>
-        <div className="text-gray-400 text-sm">融资融券余额</div>
-        <div className="text-2xl font-bold text-white">1.58万亿</div>
-        <div className="text-sm text-gray-400">较昨日 -12亿</div>
-      </Card>
-
-      {/* Sector Fund Flow */}
-      <Card title="板块资金流向">
-        <div className="grid grid-cols-2 gap-3">
-          {sectorFlow.map((sector) => (
-            <div key={sector.name} className="flex justify-between items-center bg-gray-700 rounded-lg p-3">
-              <span className="text-white">{sector.name}</span>
-              <span className={sector.trend === 'up' ? 'text-finance-green' : 'text-finance-red'}>
-                {sector.flow}
-              </span>
-            </div>
-          ))}
-        </div>
-      </Card>
-
-      {/* Premarket News */}
-      <Card title="盘前新闻摘要">
-        <ul className="space-y-2">
-          {premarketNews.map((news, index) => (
-            <li key={index} className="text-sm text-gray-300 flex items-start gap-2">
-              <span className="text-finance-green">•</span>
-              {news}
-            </li>
-          ))}
-        </ul>
       </Card>
 
       {/* Metric Explanation Modal */}
@@ -182,7 +192,7 @@ export function AStockSentiment() {
               </div>
 
               <div>
-                <h4 className="text-finance-blue font-semibold mb-2 flex items-center gap-2">
+                <h4 className="text-accent-blue font-semibold mb-2 flex items-center gap-2">
                   <span>📐</span> 计算方法
                 </h4>
                 <div className="bg-gray-700/50 rounded-lg p-3 text-sm text-gray-300 whitespace-pre-line">
@@ -191,7 +201,7 @@ export function AStockSentiment() {
               </div>
 
               <div>
-                <h4 className="text-finance-green font-semibold mb-2 flex items-center gap-2">
+                <h4 className="text-accent-green font-semibold mb-2 flex items-center gap-2">
                   <span>📖</span> 解读指南
                 </h4>
                 <div className="bg-gray-700/50 rounded-lg p-3 text-sm text-gray-300 whitespace-pre-line">
@@ -199,8 +209,8 @@ export function AStockSentiment() {
                 </div>
               </div>
 
-              <div className="bg-finance-yellow/10 border border-finance-yellow/30 rounded-xl p-4">
-                <h4 className="text-finance-yellow font-semibold mb-2 flex items-center gap-2">
+              <div className="bg-accent-yellow/10 border border-accent-yellow/30 rounded-xl p-4">
+                <h4 className="text-accent-yellow font-semibold mb-2 flex items-center gap-2">
                   <span>💡</span> 投资建议
                 </h4>
                 <p className="text-sm text-gray-300">{metricExplanations[activeMetric as MetricExplanationKeys].suggestion}</p>
