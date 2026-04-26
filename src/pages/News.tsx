@@ -1,17 +1,6 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Card, Badge } from '../components';
-
-type NewsCategory = 'all' | 'us-stock' | 'a-stock' | 'commodity' | 'crypto' | 'tech';
-
-interface NewsItem {
-  id: string;
-  category: Exclude<NewsCategory, 'all'>;
-  title: string;
-  summary: string;
-  source: string;
-  time: string;
-  impact?: 'positive' | 'negative' | 'neutral';
-}
+import { fetchNews, NewsCategory, NewsItem } from '../services/api/newsData';
 
 const categories: { key: NewsCategory; label: string }[] = [
   { key: 'all', label: '全部' },
@@ -20,81 +9,6 @@ const categories: { key: NewsCategory; label: string }[] = [
   { key: 'commodity', label: '大宗' },
   { key: 'crypto', label: '加密' },
   { key: 'tech', label: '科技' },
-];
-
-const allNews: NewsItem[] = [
-  {
-    id: '1',
-    category: 'us-stock',
-    title: '特斯拉Q1交付量超预期，股价+5.2%',
-    summary: '特斯拉今日公布Q1交付数据，环比+20%，超市场预期。分析师上调目标价至200美元。',
-    source: 'Yahoo Finance',
-    time: '2026-04-18 06:30',
-    impact: 'positive',
-  },
-  {
-    id: '2',
-    category: 'commodity',
-    title: '霍尔木兹局势紧张，原油单日-9.41%',
-    summary: '地缘政治风险升温，霍尔木兹海峡紧张局势导致原油价格大幅下跌。',
-    source: 'Bloomberg',
-    time: '2026-04-18 07:15',
-    impact: 'negative',
-  },
-  {
-    id: '3',
-    category: 'a-stock',
-    title: 'AI芯片板块集体爆发，多股涨停',
-    summary: '国家发布AI芯片补贴政策，规模百亿级。寒武纪、海光信息等多股涨停。',
-    source: '东方财富',
-    time: '2026-04-18 08:00',
-    impact: 'positive',
-  },
-  {
-    id: '4',
-    category: 'crypto',
-    title: 'BTC $75,951 (-1.86%)，恐慌情绪有所缓解',
-    summary: '比特币价格小幅回调，但恐慌贪婪指数显示情绪有所改善。机构买入增加。',
-    source: 'CoinDesk',
-    time: '2026-04-18 07:45',
-    impact: 'neutral',
-  },
-  {
-    id: '5',
-    category: 'tech',
-    title: '字节跳动发布Gauss 2.0，推理速度提升40%',
-    summary: '字节跳动发布新一代大模型Gauss 2.0，在多项基准测试中超越GPT-4。',
-    source: 'TechCrunch',
-    time: '2026-04-18 09:00',
-    impact: 'positive',
-  },
-  {
-    id: '6',
-    category: 'us-stock',
-    title: '美联储官员重申：降息需更多通胀数据支持',
-    summary: '多位美联储官员表示，需要看到更多通胀回落证据才会考虑降息。',
-    source: 'Reuters',
-    time: '2026-04-18 08:30',
-    impact: 'neutral',
-  },
-  {
-    id: '7',
-    category: 'a-stock',
-    title: '宁德时代辟谣：暂未与特斯拉合作建厂',
-    summary: '针对市场传闻，宁德时代澄清目前暂无与特斯拉合作建厂的计划。',
-    source: '证券时报',
-    time: '2026-04-18 10:15',
-    impact: 'neutral',
-  },
-  {
-    id: '8',
-    category: 'commodity',
-    title: '黄金突破$4,879，创历史新高',
-    summary: '避险需求推动黄金价格持续走高，突破$4,879美元/盎司。',
-    source: 'Kitco',
-    time: '2026-04-18 11:00',
-    impact: 'positive',
-  },
 ];
 
 const categoryIcons: Record<Exclude<NewsCategory, 'all'>, string> = {
@@ -108,13 +22,40 @@ const categoryIcons: Record<Exclude<NewsCategory, 'all'>, string> = {
 export function News() {
   const [activeCategory, setActiveCategory] = useState<NewsCategory>('all');
   const [expandedNews, setExpandedNews] = useState<string | null>(null);
+  const [allNews, setAllNews] = useState<NewsItem[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const filteredNews = activeCategory === 'all'
-    ? allNews
-    : allNews.filter(news => news.category === activeCategory);
+  // 加载新闻数据
+  useEffect(() => {
+    async function loadNews() {
+      setLoading(true);
+      const news = await fetchNews('all', 20);
+      setAllNews(news);
+      setLoading(false);
+    }
+    loadNews();
+  }, []);
+
+  // 切换分类时重新加载
+  useEffect(() => {
+    async function loadFilteredNews() {
+      setLoading(true);
+      const news = await fetchNews(activeCategory, 20);
+      setAllNews(news);
+      setLoading(false);
+    }
+    loadFilteredNews();
+  }, [activeCategory]);
+
+  const filteredNews = allNews;
 
   const toggleExpand = (id: string) => {
     setExpandedNews(expandedNews === id ? null : id);
+  };
+
+  const handleCategoryChange = (category: NewsCategory) => {
+    setActiveCategory(category);
+    setExpandedNews(null);
   };
 
   return (
@@ -129,7 +70,7 @@ export function News() {
         {categories.map((cat) => (
           <button
             key={cat.key}
-            onClick={() => setActiveCategory(cat.key)}
+            onClick={() => handleCategoryChange(cat.key)}
             className={`px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition-colors ${
               activeCategory === cat.key
                 ? 'bg-finance-blue text-white'
@@ -141,7 +82,15 @@ export function News() {
         ))}
       </div>
 
+      {/* Loading State */}
+      {loading && (
+        <div className="text-center text-gray-400 py-8">
+          <div className="animate-pulse">加载中...</div>
+        </div>
+      )}
+
       {/* News List */}
+      {!loading && (
       <div className="space-y-3">
         {filteredNews.map((news) => (
           <Card key={news.id} className="cursor-pointer" onClick={() => toggleExpand(news.id)}>
@@ -212,8 +161,9 @@ export function News() {
           </Card>
         ))}
       </div>
+      )}
 
-      {filteredNews.length === 0 && (
+      {!loading && filteredNews.length === 0 && (
         <div className="text-center text-gray-400 py-8">
           暂无该分类新闻
         </div>

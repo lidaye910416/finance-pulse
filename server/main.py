@@ -1274,6 +1274,189 @@ async def get_arbitrage_opportunities():
     )
 
 
+# ========== 新闻资讯 API ==========
+
+class NewsItem(BaseModel):
+    """新闻条目"""
+    id: str
+    category: str  # us-stock, a-stock, commodity, crypto, tech
+    title: str
+    summary: str
+    source: str
+    time: str
+    impact: Optional[str] = None  # positive, negative, neutral
+
+
+class NewsResponse(BaseModel):
+    """新闻响应"""
+    items: list[NewsItem]
+    updateTime: str
+
+
+@app.get("/api/news", response_model=NewsResponse)
+async def get_news(category: str = "all", limit: int = 20):
+    """
+    获取市场新闻
+
+    使用东方财富快讯API
+    """
+    try:
+        import httpx
+
+        # 东方财富快讯API
+        url = "https://np-listapi.eastmoney.com/comm/web/getFastNewsList"
+        params = {
+            "cb": "jQuery",
+            "client": "web",
+            "page": 1,
+            "pageSize": limit * 2,  # 多获取一些以便分类
+            "endTime": "",
+            "keyword": "",
+            "order": 1,
+        }
+
+        response = httpx.get(url, params=params, timeout=10)
+        if response.status_code == 200:
+            text = response.text
+            # 解析 JSONP 响应
+            import re
+            match = re.search(r'\((.*)\)', text)
+            if match:
+                data = eval(match.group(1))
+                news_list = data.get("data", []) or []
+
+                items = []
+                for idx, news in enumerate(news_list[:limit]):
+                    title = news.get("title", "")
+                    content = news.get("content", "") or news.get("summary", "")
+                    source = news.get("src", "") or news.get("media", "") or "东方财富"
+                    time_str = news.get("ShowTime", "") or news.get("time", "")
+
+                    # 根据标题关键词分类
+                    category_type = "a-stock"
+                    impact = "neutral"
+
+                    # 分类关键词
+                    if any(k in title for k in ["特斯拉", "苹果", "美股", "纳斯达克", "标普", "美联储", "谷歌", "Meta", "英伟达"]):
+                        category_type = "us-stock"
+                    elif any(k in title for k in ["黄金", "原油", "白银", "铜", "大宗商品", "石油"]):
+                        category_type = "commodity"
+                    elif any(k in title for k in ["BTC", "ETH", "比特币", "以太坊", "加密", "Crypto"]):
+                        category_type = "crypto"
+                    elif any(k in title for k in ["AI", "字节", "腾讯", "阿里", "百度", "大模型", "芯片", "科技"]):
+                        category_type = "tech"
+                    elif any(k in title for k in ["A股", "上证", "深证", "创业板", "科创板", "沪指"]):
+                        category_type = "a-stock"
+
+                    # 影响判断
+                    if any(k in title for k in ["涨", "+", "突破", "创新高", "超预期", "利好", "增持", "买入", "爆发"]):
+                        impact = "positive"
+                    elif any(k in title for k in ["跌", "-", "破位", "创新低", "利空", "减持", "卖出", "危机", "紧张"]):
+                        impact = "negative"
+                    else:
+                        impact = "neutral"
+
+                    # 如果是 all 分类或者匹配指定分类
+                    if category == "all" or category == category_type:
+                        items.append(NewsItem(
+                            id=str(news.get("id", idx + 1)),
+                            category=category_type,
+                            title=title,
+                            summary=content[:200] if content else "",
+                            source=source,
+                            time=time_str,
+                            impact=impact,
+                        ))
+
+                if items:
+                    return NewsResponse(
+                        items=items[:limit],
+                        updateTime=datetime.now().strftime("%Y-%m-%d %H:%M"),
+                    )
+
+    except Exception as e:
+        print(f"[news] 获取失败: {e}")
+
+    # Fallback
+    return NewsResponse(
+        items=[
+            NewsItem(
+                id="1",
+                category="us-stock",
+                title="特斯拉Q1交付量超预期，股价+5.2%",
+                summary="特斯拉今日公布Q1交付数据，环比+20%，超市场预期。分析师上调目标价至200美元。",
+                source="Yahoo Finance",
+                time="2026-04-18 06:30",
+                impact="positive",
+            ),
+            NewsItem(
+                id="2",
+                category="commodity",
+                title="霍尔木兹局势紧张，原油单日大幅下跌",
+                summary="地缘政治风险升温，霍尔木兹海峡紧张局势导致原油价格大幅下跌。",
+                source="Bloomberg",
+                time="2026-04-18 07:15",
+                impact="negative",
+            ),
+            NewsItem(
+                id="3",
+                category="a-stock",
+                title="AI芯片板块集体爆发，多股涨停",
+                summary="国家发布AI芯片补贴政策，规模百亿级。寒武纪、海光信息等多股涨停。",
+                source="东方财富",
+                time="2026-04-18 08:00",
+                impact="positive",
+            ),
+            NewsItem(
+                id="4",
+                category="crypto",
+                title="BTC价格小幅回调，恐慌情绪有所缓解",
+                summary="比特币价格小幅回调，但恐慌贪婪指数显示情绪有所改善。机构买入增加。",
+                source="CoinDesk",
+                time="2026-04-18 07:45",
+                impact="neutral",
+            ),
+            NewsItem(
+                id="5",
+                category="tech",
+                title="字节跳动发布Gauss 2.0，推理速度提升40%",
+                summary="字节跳动发布新一代大模型Gauss 2.0，在多项基准测试中超越GPT-4。",
+                source="TechCrunch",
+                time="2026-04-18 09:00",
+                impact="positive",
+            ),
+            NewsItem(
+                id="6",
+                category="us-stock",
+                title="美联储官员重申：降息需更多通胀数据支持",
+                summary="多位美联储官员表示，需要看到更多通胀回落证据才会考虑降息。",
+                source="Reuters",
+                time="2026-04-18 08:30",
+                impact="neutral",
+            ),
+            NewsItem(
+                id="7",
+                category="a-stock",
+                title="宁德时代辟谣：暂未与特斯拉合作建厂",
+                summary="针对市场传闻，宁德时代澄清目前暂无与特斯拉合作建厂的计划。",
+                source="证券时报",
+                time="2026-04-18 10:15",
+                impact="neutral",
+            ),
+            NewsItem(
+                id="8",
+                category="commodity",
+                title="黄金突破历史新高，避险需求旺盛",
+                summary="避险需求推动黄金价格持续走高，突破历史高位。",
+                source="Kitco",
+                time="2026-04-18 11:00",
+                impact="positive",
+            ),
+        ],
+        updateTime=datetime.now().strftime("%Y-%m-%d %H:%M"),
+    )
+
+
 @app.get("/llm/test")
 async def test_llm():
     """测试 LLM 连接"""

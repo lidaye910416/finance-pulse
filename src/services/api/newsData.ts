@@ -1,79 +1,144 @@
 /**
  * 新闻资讯 API 服务
- * 
- * 从东方财富获取新闻资讯
+ *
+ * 调用后端 API 获取新闻资讯
  */
 
-import type { NewsItem } from '../data/types';
+import { API_BASE_URL } from './apiService';
+
+// 新闻分类
+export type NewsCategory = 'all' | 'us-stock' | 'a-stock' | 'commodity' | 'crypto' | 'tech';
+
+// 新闻条目接口
+export interface NewsItem {
+  id: string;
+  category: Exclude<NewsCategory, 'all'>;
+  title: string;
+  summary: string;
+  source: string;
+  time: string;
+  impact?: 'positive' | 'negative' | 'neutral';
+}
+
+// 新闻响应
+interface NewsResponse {
+  items: NewsItem[];
+  updateTime: string;
+}
+
+// Fallback 新闻数据
+const FALLBACK_NEWS: NewsItem[] = [
+  {
+    id: '1',
+    category: 'us-stock',
+    title: '特斯拉Q1交付量超预期，股价大幅上涨',
+    summary: '特斯拉今日公布Q1交付数据，环比增长显著，超市场预期。分析师上调目标价。',
+    source: 'Yahoo Finance',
+    time: '2026-04-18 06:30',
+    impact: 'positive',
+  },
+  {
+    id: '2',
+    category: 'commodity',
+    title: '霍尔木兹局势紧张，原油价格大幅下跌',
+    summary: '地缘政治风险升温，霍尔木兹海峡紧张局势导致原油价格大幅下跌。',
+    source: 'Bloomberg',
+    time: '2026-04-18 07:15',
+    impact: 'negative',
+  },
+  {
+    id: '3',
+    category: 'a-stock',
+    title: 'AI芯片板块集体爆发，多股涨停',
+    summary: '国家发布AI芯片补贴政策，规模百亿级。寒武纪、海光信息等多股涨停。',
+    source: '东方财富',
+    time: '2026-04-18 08:00',
+    impact: 'positive',
+  },
+  {
+    id: '4',
+    category: 'crypto',
+    title: 'BTC价格小幅回调，恐慌情绪有所缓解',
+    summary: '比特币价格小幅回调，但恐慌贪婪指数显示情绪有所改善。机构买入增加。',
+    source: 'CoinDesk',
+    time: '2026-04-18 07:45',
+    impact: 'neutral',
+  },
+  {
+    id: '5',
+    category: 'tech',
+    title: '字节跳动发布Gauss 2.0，推理速度提升40%',
+    summary: '字节跳动发布新一代大模型Gauss 2.0，在多项基准测试中超越GPT-4。',
+    source: 'TechCrunch',
+    time: '2026-04-18 09:00',
+    impact: 'positive',
+  },
+  {
+    id: '6',
+    category: 'us-stock',
+    title: '美联储官员重申：降息需更多通胀数据支持',
+    summary: '多位美联储官员表示，需要看到更多通胀回落证据才会考虑降息。',
+    source: 'Reuters',
+    time: '2026-04-18 08:30',
+    impact: 'neutral',
+  },
+  {
+    id: '7',
+    category: 'a-stock',
+    title: '宁德时代辟谣：暂未与特斯拉合作建厂',
+    summary: '针对市场传闻，宁德时代澄清目前暂无与特斯拉合作建厂的计划。',
+    source: '证券时报',
+    time: '2026-04-18 10:15',
+    impact: 'neutral',
+  },
+  {
+    id: '8',
+    category: 'commodity',
+    title: '黄金突破历史新高，避险需求旺盛',
+    summary: '避险需求推动黄金价格持续走高，突破历史高位。',
+    source: 'Kitco',
+    time: '2026-04-18 11:00',
+    impact: 'positive',
+  },
+];
 
 /**
- * 获取快讯
+ * 获取市场新闻
+ * @param category 新闻分类 (all/us-stock/a-stock/commodity/crypto/tech)
+ * @param limit 返回数量限制
  */
-export async function fetchNews(limit: number = 20): Promise<NewsItem[]> {
+export async function fetchNews(category: NewsCategory = 'all', limit: number = 20): Promise<NewsItem[]> {
   try {
-    // 东方财富快讯API
-    const url = `https://np-listapi.eastmoney.com/comm/web/getFastNewsList?cb=jQuery&client=web&page=1&pageSize=${limit}&endTime=&keyword=&order=1`;
-
-    const response = await fetch(url);
-    if (!response.ok) return [];
-
-    // 简化处理，实际API响应格式可能不同
-    const mockNews: NewsItem[] = [
-      {
-        id: '1',
-        title: '央行宣布定向降准，释放长期资金约1000亿元',
-        content: '中国人民银行宣布，为支持实体经济发展，决定于近期实施定向降准...',
-        source: '东方财富',
-        time: Date.now() - 3600000,
-        tags: ['央行', '降准', '货币政策'],
-        sentiment: 'positive',
-        relatedStocks: [],
-      },
-      {
-        id: '2',
-        title: '证监会发布科创板改革新举措',
-        content: '证监会今日发布《关于深化科创板改革的若干措施》...',
-        source: '证监会',
-        time: Date.now() - 7200000,
-        tags: ['证监会', '科创板', '改革'],
-        sentiment: 'positive',
-        relatedStocks: [],
-      },
-      {
-        id: '3',
-        title: '3月出口数据超预期，贸易顺差扩大',
-        content: '海关总署今日公布的数据显示，3月份我国外贸进出口总值同比增长...',
-        source: '海关总署',
-        time: Date.now() - 10800000,
-        tags: ['外贸', '出口', '经济数据'],
-        sentiment: 'positive',
-        relatedStocks: [],
-      },
-      {
-        id: '4',
-        title: '多家券商发布年报，业绩分化明显',
-        content: '中信证券、华泰证券等券商陆续发布2024年年报...',
-        source: '东方财富',
-        time: Date.now() - 14400000,
-        tags: ['券商', '年报', '业绩'],
-        sentiment: 'neutral',
-        relatedStocks: ['600030', '601688'],
-      },
-      {
-        id: '5',
-        title: '美股大幅下跌，纳指跌幅超过2%',
-        content: '隔夜美股三大指数集体收跌，纳斯达克指数跌幅超过2%...',
-        source: '东方财富',
-        time: Date.now() - 18000000,
-        tags: ['美股', '纳斯达克', '外围市场'],
-        sentiment: 'negative',
-        relatedStocks: [],
-      },
-    ];
-
-    return mockNews;
+    const response = await fetch(`${API_BASE_URL}/api/news?category=${category}&limit=${limit}`);
+    if (response.ok) {
+      const data: NewsResponse = await response.json();
+      return data.items || [];
+    }
   } catch (error) {
     console.error('获取新闻失败:', error);
+  }
+  return FALLBACK_NEWS;
+}
+
+/**
+ * 获取快讯 (兼容旧接口)
+ */
+export async function fetchFastNews(limit: number = 20): Promise<Array<{
+  id: string;
+  title: string;
+  sentiment: 'positive' | 'negative' | 'neutral';
+  time: string;
+}>> {
+  try {
+    const news = await fetchNews('all', limit);
+    return news.map(item => ({
+      id: item.id,
+      title: item.title,
+      sentiment: (item.impact || 'neutral') as 'positive' | 'negative' | 'neutral',
+      time: item.time,
+    }));
+  } catch (error) {
+    console.error('获取快讯失败:', error);
     return [];
   }
 }
@@ -81,31 +146,35 @@ export async function fetchNews(limit: number = 20): Promise<NewsItem[]> {
 /**
  * 获取股票相关新闻
  */
-export async function fetchStockNews(code: string, limit: number = 10): Promise<NewsItem[]> {
+export async function fetchStockNews(code: string, limit: number = 10): Promise<Array<{
+  id: string;
+  title: string;
+  content: string;
+  source: string;
+  time: number;
+  tags: string[];
+  sentiment: 'positive' | 'negative' | 'neutral';
+  relatedStocks: string[];
+}>> {
   try {
-    // 东方财富个股新闻API
-    const url = `https://np-listapi.eastmoney.com/comm/web/getSecurityNewsList?cb=jQuery&client=web&page=1&pageSize=${limit}&code=${code}`;
-
-    const response = await fetch(url);
-    if (!response.ok) return [];
-
-    // 返回模拟数据
-    return [
-      {
-        id: `${code}-1`,
-        title: `${code}发布2024年年报，净利润同比增长15%`,
-        content: '公司今日发布年度报告，实现营业收入...',
-        source: '东方财富',
-        time: Date.now() - 86400000,
-        tags: ['年报', '业绩'],
-        sentiment: 'positive',
+    const response = await fetch(`${API_BASE_URL}/api/news?category=a-stock&limit=${limit}`);
+    if (response.ok) {
+      const data: NewsResponse = await response.json();
+      return data.items.map(item => ({
+        id: item.id,
+        title: item.title,
+        content: item.summary,
+        source: item.source,
+        time: new Date(item.time).getTime(),
+        tags: [item.category],
+        sentiment: (item.impact || 'neutral') as 'positive' | 'negative' | 'neutral',
         relatedStocks: [code],
-      },
-    ];
+      }));
+    }
   } catch (error) {
     console.error(`获取股票新闻失败 ${code}:`, error);
-    return [];
   }
+  return [];
 }
 
 /**
@@ -113,12 +182,10 @@ export async function fetchStockNews(code: string, limit: number = 10): Promise<
  */
 export async function searchNews(keyword: string, limit: number = 20): Promise<NewsItem[]> {
   try {
-    // 简单实现，实际应调用搜索API
-    const allNews = await fetchNews(100);
-    return allNews.filter(news => 
-      news.title.includes(keyword) || 
-      news.content.includes(keyword) ||
-      news.tags.some(tag => tag.includes(keyword))
+    const news = await fetchNews('all', 100);
+    return news.filter(item =>
+      item.title.includes(keyword) ||
+      item.summary.includes(keyword)
     ).slice(0, limit);
   } catch (error) {
     console.error(`搜索新闻失败 ${keyword}:`, error);
