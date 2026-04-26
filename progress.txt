@@ -119,3 +119,71 @@ Quality checks:
   - 股票行情和K线仍直接从东方财富获取，不需要经过后端
 
 **Note:** Please manually verify PRD - US-032 passes should be true
+
+================================================================================
+US-037, US-038: 实现后端宏观数据API和汇率API
+================================================================================
+Date: 2026-04-26 14:30
+
+What was implemented:
+- 实现 GET /api/macro/gdp - GDP增速数据
+- 实现 GET /api/macro/cpi - CPI数据 (同比/环比)
+- 实现 GET /api/macro/pmi - PMI数据 (制造业/非制造业/综合)
+- 实现 GET /api/macro/lpr - LPR数据 (1年期/5年期)
+- 实现 GET /api/macro - 宏观数据综合接口
+- 实现 GET /api/macro/exchange-rate - 人民币汇率 (USD/EUR/JPY/GBP/HKD等)
+- 所有API使用东方财富数据源
+- 所有API有fallback数据
+
+Files changed:
+- server/main.py (+295 lines)
+- .claude/ralph-skills/prd.json (US-037, US-038 passes=true)
+
+Quality checks:
+- Python syntax check: PASSED ✓
+
+**Learnings for future iterations:**
+  - 宏观数据API使用东方财富datacenter-web API
+  - API报告名称: RPT_ECONOMIC_GDP, RPT_ECONOMIC_CPI, RPT_ECONOMIC_PMI, RPT_LPR, RPT_HSRT_LISTINFO
+  - Fallback数据确保API不可用时仍能返回合理默认值
+  - Pydantic模型定义在main.py顶部，与端点函数在同一文件
+
+**Note:** Frontend integration (US-039, US-040) needs to be done separately
+
+================================================================================
+US-039: 更新前端宏观数据API调用
+================================================================================
+Date: 2026-04-26 18:15
+
+What was implemented:
+- 更新 fetchGDPData 调用后端 GET /api/macro/gdp
+- 更新 fetchCPIData 调用后端 GET /api/macro/cpi
+- 更新 fetchPMIData 调用后端 GET /api/macro/pmi
+- 更新 fetchLPRData 调用后端 GET /api/macro/lpr
+- 更新 fetchAllMacroData 调用后端 GET /api/macro 聚合API
+- 所有API调用有 fallback 数据确保后端不可用时正常运行
+- 更新 DataPage.tsx 使用 fallbackMacroIndicators 替代 mockMacroIndicators
+
+Files changed:
+- src/services/api/macroData.ts (+77/-49 lines)
+- src/pages/DataPage.tsx (+42 lines)
+- .claude/ralph-skills/prd.json (US-039 passes=true)
+
+Quality checks:
+- TypeScript typecheck: PASSED ✓
+
+**Learnings for future iterations:**
+  - 前端宏观数据API通过 API_BASE_URL (localhost:5000) 调用后端
+  - 后端 /api/macro 聚合接口返回 { gdp, cpi, pmi, lpr } 统一结构
+  - 单独指标API返回更详细的数据 (year, month, quarter 等)
+  - GDP数据: data.current 是当前季度增速, data.previous 是上季度
+  - CPI数据: data.yoy 是同比, data.mom 是环比
+  - PMI数据: data.manufacturing 是制造业PMI (主值), data.nonManufacturing 是非制造业, data.composite 是综合
+  - LPR数据: data.oneYear 是1年期, data.fiveYear 是5年期以上
+  - GDP和CPI趋势图表数据暂未接入API，使用本地 mockGdpTrend/mockCpiTrend
+  - TypeScript typecheck: npx tsc --noEmit --skipLibCheck
+
+**Note:** US-040 (更新前端汇率数据) 还需要实现
+
+---
+
