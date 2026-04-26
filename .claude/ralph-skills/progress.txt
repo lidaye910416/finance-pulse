@@ -72,3 +72,22 @@
 - Pattern: Output format is JSON with decision, confidence, reasoning, key_factors, risk_factors
 - Pattern: Leaders import AgentState from graph.state and LLMService from services.llm
 - Gotcha: Python 3.9 uses `from typing import Optional` instead of `type | None` syntax
+
+## 2026-04-26 10:45 - US-005
+- Created server/agents/leaders/warren_buffett.py with WarrenBuffettLeader class
+- Implemented 7-dimension analysis framework:
+  - Business quality (moat analysis)
+  - Profitability (ROE, ROA, margins)
+  - Growth (revenue/profit growth)
+  - Financial health (debt, cash flow)
+  - Intrinsic value (DCF, DDM)
+  - Margin of safety calculation
+  - Management quality
+- Added create_warren_buffett_leader() factory function
+- Added run_warren_buffett_analysis() async convenience function
+
+**Learnings:**
+- Warren Buffett analysis uses SEVEN_DIMENSIONS constant list
+- Output includes seven_dimensions nested dict with scores for each dimension
+- margin_of_safety calculation: (intrinsic_value - current_price) / intrinsic_value
+- get_seven_dimensions() helper method returns the 7 dimension labels
