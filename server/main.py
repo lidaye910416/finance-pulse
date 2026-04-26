@@ -50,11 +50,23 @@ app.add_middleware(
 llm_service = LLMService()
 data_service = DataService()
 
-# 创建 LangGraph 工作流
-workflow = create_workflow(llm_service)
-graph: CompiledGraph = workflow.compile()
+# 工作流缓存
+workflows: dict[str, CompiledGraph] = {}
 
-print("[FinancePulse] LangGraph 工作流已初始化")
+def get_workflow(mode: str, llm_service: LLMService) -> CompiledGraph:
+    """根据mode获取对应的工作流"""
+    if mode not in workflows:
+        if mode == "tradingagents":
+            workflow = create_tradingagents_workflow(llm_service)
+        elif mode == "aihedgefund":
+            workflow = create_aihedgefund_workflow(llm_service)
+        else:  # fusion
+            workflow = create_fusion_workflow(llm_service)
+        workflows[mode] = workflow.compile()
+        print(f"[FinancePulse] 已加载 {mode} 工作流")
+    return workflows[mode]
+
+print("[FinancePulse] LangGraph 服务已初始化")
 
 
 # ========== 请求/响应模型 ==========
@@ -167,21 +179,27 @@ async def health_check():
 async def analyze_stock(request: AnalysisRequest):
     """
     分析股票
-    
-    基于 LangGraph 多智能体工作流:
-    1. 数据收集
-    2. 并行 Agent 分析
-    3. 多空辩论 (循环直到收敛或达到最大迭代)
-    4. 综合决策
+
+    根据 mode 参数选择不同的工作流:
+    - tradingagents: 8阶段工作流 (市场/社交/新闻/基本面分析 + 多空辩论 + 风险辩论 + 组合管理)
+    - aihedgefund: 4层架构 (数据收集 + 动态分析师选择 + 风险评估 + 领袖决策)
+    - fusion: 5层架构 (数据收集 + 5位固定分析师 + 多空辩论 + 简化风险评估 + 领袖决策)
+
+    参数:
+    - mode: 分析模式
+    - leader_id: 投资大师ID (fusion/aihedgefund模式必需)
+    - risk_level: 风险偏好 (tradingagents模式使用)
+    - convergence_gap: 置信度收敛阈值
+    - early_stop_gap: 提前停止阈值
     """
     start_time = datetime.now()
-    
+
     try:
         # 获取股票数据
         stock_data = await data_service.get_stock_data(request.code)
         name = request.name or stock_data.get("name", f"股票{request.code}")
-        
-        # 构建初始状态
+
+        # 构建初始状态 - 包含所有工作流需要的字段
         initial_state = {
             "code": request.code,
             "name": name,
@@ -196,33 +214,97 @@ async def analyze_stock(request: AnalysisRequest):
             "recommendation": None,
             "total_tokens": 0,
             "error": None,
+            # 新增参数
+            "mode": request.mode,
+            "leader_id": request.leader_id,
+            "risk_level": request.risk_level,
+            "convergence_gap": request.convergence_gap,
+            "early_stop_gap": request.early_stop_gap,
         }
-        
-        # 运行 LangGraph 工作流
-        result = graph.invoke(initial_state)
-        
+
+        # 根据 mode 获取并运行对应工作流
+        mode = request.mode
+        print(f"[analyze] 使用 {mode} 工作流分析 {request.code}...")
+
+        workflow = get_workflow(mode, llm_service)
+        result = workflow.invoke(initial_state)
+
         duration_ms = int((datetime.now() - start_time).total_seconds() * 1000)
-        
+
+        # 处理响应
+        signals = result.get("analyst_signals", [])
+        if not isinstance(signals, list):
+            signals = []
+
+        debate_result = result.get("debate_history")
+        if isinstance(debate_result, list) and len(debate_result) > 0:
+            debate_result = debate_result[-1]
+        elif debate_result is None:
+            debate_result = None
+
+        # 处理 recommendation
+        recommendation_data = result.get("recommendation", {})
+        if not recommendation_data:
+            recommendation_data = {
+                "action": "watch",
+                "confidence": 0,
+                "timeframe": "unknown",
+                "risks": [result.get("error", "分析失败")]
+            }
+
         return AnalysisResponse(
             code=request.code,
             name=name,
             timestamp=int(datetime.now().timestamp() * 1000),
             duration_ms=duration_ms,
             iterations=result.get("iteration", 0),
-            signals=[
-                SignalModel(**sig) for sig in result.get("analyst_signals", [])
-            ],
-            debate_result=result.get("debate_history")[-1] if result.get("debate_history") else None,
+            signals=[SignalModel(**sig) for sig in signals],
+            debate_result=debate_result,
             summary=result.get("final_summary", ""),
             model=llm_service.get_provider(),
             total_tokens=result.get("total_tokens", 0),
-            recommendation=RecommendationModel(**result.get("recommendation", {})),
+            recommendation=RecommendationModel(**recommendation_data),
             error=result.get("error"),
         )
-        
+
     except Exception as e:
         duration_ms = int((datetime.now() - start_time).total_seconds() * 1000)
         raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/leaders")
+async def get_leaders():
+    """
+    获取所有投资大师列表
+
+    返回格式:
+    {
+        "leaders": [
+            {
+                "id": "warren_buffett",
+                "name": "沃伦·巴菲特",
+                "name_en": "Warren Buffett",
+                "style": "价值投资",
+                "avatar": "🎯",
+                "description": "奥马哈先知，价值投资教父"
+            },
+            ...
+        ]
+    }
+    """
+    return {
+        "leaders": [
+            {
+                "id": leader["id"],
+                "name": leader["name"],
+                "name_en": leader.get("name_en", leader["name"]),
+                "style": leader["style"],
+                "avatar": leader.get("avatar", "👤"),
+                "description": leader["description"],
+            }
+            for leader in LEADERS
+        ]
+    }
 
 
 @app.get("/quote/{code}", response_model=QuoteResponse)
